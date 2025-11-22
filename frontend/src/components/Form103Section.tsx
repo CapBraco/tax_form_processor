@@ -1,0 +1,252 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { getForm103Data, listDocumentsByFormType } from '@/lib/api'
+import { FileText, Download, ArrowLeft } from 'lucide-react'
+
+export default function Form103Section() {
+  const [documents, setDocuments] = useState<any[]>([])
+  const [selectedDoc, setSelectedDoc] = useState<any>(null)
+  const [formData, setFormData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [detailLoading, setDetailLoading] = useState(false)
+
+  useEffect(() => {
+    loadDocuments()
+  }, [])
+
+  const loadDocuments = async () => {
+    setLoading(true)
+    try {
+      const data = await listDocumentsByFormType('form_103')
+      setDocuments(data.documents)
+    } catch (error) {
+      console.error('Error loading Form 103 documents:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleViewForm = async (doc: any) => {
+    setSelectedDoc(doc)
+    setDetailLoading(true)
+    try {
+      const data = await getForm103Data(doc.id)
+      setFormData(data)
+    } catch (error) {
+      console.error('Error loading form data:', error)
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  const handleBack = () => {
+    setSelectedDoc(null)
+    setFormData(null)
+  }
+
+  const exportToCSV = () => {
+    if (!formData) return
+
+    const headers = ['Concepto', 'Código Base', 'BASE IMPONIBLE', 'Código Retención', 'VALOR RETENIDO']
+    const rows = formData.line_items.map((item: any) => [
+      item.concepto,
+      item.codigo_base,
+      item.base_imponible.toFixed(2),
+      item.codigo_retencion,
+      item.valor_retenido.toFixed(2)
+    ])
+
+    const csv = [
+      headers.join(','),
+      ...rows.map((row: any) => row.map((cell: any) => `"${cell}"`).join(','))
+    ].join('\n')
+
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `form_103_${selectedDoc.filename.replace('.pdf', '')}.csv`
+    a.click()
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // Document List View
+  if (!selectedDoc) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Form 103 - Declaración de Retenciones en la Fuente
+          </h2>
+          
+          {documents.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <FileText size={48} className="mx-auto mb-4" />
+              <p>No Form 103 documents uploaded yet</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  onClick={() => handleViewForm(doc)}
+                  className="border rounded-lg p-4 hover:shadow-lg cursor-pointer transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <FileText className="text-blue-600" size={24} />
+                    <span className="text-xs text-gray-500">{doc.periodo}</span>
+                  </div>
+                  <h3 className="font-medium text-gray-900 mb-1 truncate">{doc.filename}</h3>
+                  <p className="text-sm text-gray-600 truncate">{doc.razon_social}</p>
+                  <p className="text-xs text-gray-500 mt-2">Fecha: {doc.fecha_recaudacion}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Detail View with Table
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <button
+          onClick={handleBack}
+          className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
+        >
+          <ArrowLeft size={20} className="mr-2" />
+          Back to list
+        </button>
+
+        {detailLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : formData ? (
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{formData.filename}</h2>
+                <p className="text-gray-600">{formData.razon_social}</p>
+                <p className="text-sm text-gray-500">
+                  {formData.periodo} | Fecha: {formData.fecha_recaudacion}
+                </p>
+              </div>
+              <button
+                onClick={exportToCSV}
+                className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              >
+                <Download size={18} />
+                <span>Export CSV</span>
+              </button>
+            </div>
+
+            {/* Line Items Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 border-b-2 border-gray-300">
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                      Concepto
+                    </th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                      Código Base
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                      BASE IMPONIBLE
+                    </th>
+                    <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">
+                      Código Ret.
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                      VALOR RETENIDO
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {formData.line_items.map((item: any, index: number) => (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm text-gray-900">{item.concepto}</td>
+                      <td className="px-4 py-3 text-sm text-center text-gray-700">
+                        {item.codigo_base}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-medium text-blue-700">
+                        ${item.base_imponible.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-center text-gray-700">
+                        {item.codigo_retencion}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-medium text-green-700">
+                        ${item.valor_retenido.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {/* Totals Footer */}
+                <tfoot className="bg-gray-50 border-t-2 border-gray-300">
+                  <tr>
+                    <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900">
+                      TOTAL
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-bold text-blue-900">
+                      ${formData.line_items.reduce((sum: number, item: any) => sum + item.base_imponible, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                    <td className="px-4 py-3"></td>
+                    <td className="px-4 py-3 text-sm text-right font-bold text-green-900">
+                      ${formData.line_items.reduce((sum: number, item: any) => sum + item.valor_retenido, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Summary Totals */}
+            {formData.totals && (
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="border rounded-lg p-4 bg-blue-50">
+                  <p className="text-sm text-gray-600">Subtotal Operaciones País</p>
+                  <p className="text-xl font-bold text-blue-700">
+                    ${formData.totals.subtotal_operaciones?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="border rounded-lg p-4 bg-green-50">
+                  <p className="text-sm text-gray-600">Total Retención</p>
+                  <p className="text-xl font-bold text-green-700">
+                    ${formData.totals.total_retencion?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="border rounded-lg p-4 bg-yellow-50">
+                  <p className="text-sm text-gray-600">Total Impuesto a Pagar</p>
+                  <p className="text-xl font-bold text-yellow-700">
+                    ${formData.totals.total_impuesto_pagar?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <div className="border rounded-lg p-4 bg-purple-50">
+                  <p className="text-sm text-gray-600">Total Pagado</p>
+                  <p className="text-xl font-bold text-purple-700">
+                    ${formData.totals.total_pagado?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            Error loading form data
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
