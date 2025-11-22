@@ -1,6 +1,6 @@
 """
-Enhanced Database Models
-Stores documents with structured form-specific data
+Enhanced Database Models - COMPATIBLE with original project
+Adds Clientes feature fields while maintaining existing structure
 """
 
 from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey, JSON, Enum
@@ -48,26 +48,31 @@ class Document(Base):
     # Structured data (JSON)
     parsed_data = Column(JSON, nullable=True)
     
-    # Form header data
+    # Form header data (ORIGINAL FIELDS - keep these names!)
     codigo_verificador = Column(String(100), nullable=True, index=True)
     numero_serial = Column(String(100), nullable=True)
     fecha_recaudacion = Column(DateTime(timezone=True), nullable=True)
     identificacion_ruc = Column(String(50), nullable=True, index=True)
-    razon_social = Column(String(500), nullable=True)
-    periodo_mes = Column(String(20), nullable=True)
-    periodo_anio = Column(String(10), nullable=True, index=True)
+    razon_social = Column(String(500), nullable=True, index=True)  # Already exists! Just add index
+    periodo_mes = Column(String(20), nullable=True, index=True)    # Already exists! Just add index
+    periodo_anio = Column(String(10), nullable=True, index=True)   # Already exists! Keep index
+    
+    # NEW FIELDS FOR CLIENTES FEATURE - Add these columns
+    periodo_fiscal_completo = Column(String(50), nullable=True)  # e.g., "ABRIL 2025"
+    periodo_mes_numero = Column(Integer, nullable=True, index=True)  # 1-12 for sorting
     
     # Processing status
     processing_status = Column(Enum(ProcessingStatusEnum), default=ProcessingStatusEnum.PENDING, index=True)
     processing_error = Column(Text, nullable=True)
     
-    # Timestamps
+    # Timestamps (ORIGINAL FIELD NAMES - keep these!)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     processed_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
     form_103_items = relationship("Form103LineItem", back_populates="document", cascade="all, delete-orphan")
     form_104_data = relationship("Form104Data", back_populates="document", cascade="all, delete-orphan", uselist=False)
+    form_103_totals = relationship("Form103Totals", back_populates="document", cascade="all, delete-orphan", uselist=False)
     
     def __repr__(self):
         return f"<Document {self.form_type}: {self.original_filename}>"
@@ -137,3 +142,24 @@ class Form104Data(Base):
     
     def __repr__(self):
         return f"<Form104Data: Total Pagado {self.total_pagado}>"
+
+
+# NEW TABLE for Form 103 Totals (for yearly accumulator)
+class Form103Totals(Base):
+    """Form 103 Totals - Summary values for yearly accumulator"""
+    __tablename__ = "form_103_totals"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    
+    # Totals extracted from Form 103
+    subtotal_operaciones_pais = Column(Float, nullable=True, default=0.0)
+    total_retencion = Column(Float, nullable=True, default=0.0)
+    total_impuesto_pagar = Column(Float, nullable=True, default=0.0)
+    total_pagado = Column(Float, nullable=True, default=0.0)
+    
+    # Relationship
+    document = relationship("Document", back_populates="form_103_totals")
+    
+    def __repr__(self):
+        return f"<Form103Totals: Doc {self.document_id} - Total {self.total_pagado}>"

@@ -16,6 +16,7 @@ from app.core.database import engine
 from app.models import base
 
 # Import API routers
+from app.api.clientes import router as clientes_router
 from app.api import upload, documents, forms_data
 
 # Configure logging
@@ -121,7 +122,7 @@ async def health_check():
 app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
 app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
 app.include_router(forms_data.router, prefix="/api/forms-data", tags=["Forms Data"])
-
+app.include_router(clientes_router, prefix="/api", tags=["Clientes"])
 
 # Global exception handler
 @app.exception_handler(Exception)
