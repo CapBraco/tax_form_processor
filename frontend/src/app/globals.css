@@ -26,6 +26,20 @@ body {
     rgb(var(--background-start-rgb));
 }
 
+/* ✅ FIX: Ensure inputs have visible text color */
+input,
+textarea,
+select {
+  color: #111827; /* gray-900 - dark text for light backgrounds */
+}
+
+/* Dark mode input text */
+.dark input,
+.dark textarea,
+.dark select {
+  color: #f9fafb; /* gray-50 - light text for dark backgrounds */
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -49,4 +63,17 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #6b7280;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }

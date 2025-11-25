@@ -1,247 +1,182 @@
 """
-Forms Data API - Get structured data from Form 103 and 104
+Updated Forms Data API Endpoints
+Returns COMPLETE Form 104 data by merging structured DB fields with full JSON parsed_data
 """
 
-from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from pydantic import BaseModel
+from typing import Optional
 
 from app.core.database import get_db
-from app.models.base import Document, Form103LineItem, Form104Data, FormTypeEnum
+from app.models.base import Document, Form103LineItem, Form104Data, Form103Totals, FormTypeEnum
 
-router = APIRouter()
-
-
-# Response Models
-class Form103LineItemResponse(BaseModel):
-    """Response model for Form 103 line item"""
-    id: int
-    concepto: str
-    codigo_base: str
-    base_imponible: float
-    codigo_retencion: str
-    valor_retenido: float
-    order_index: int
-    
-    class Config:
-        from_attributes = True
+router = APIRouter(tags=["forms-data"])
 
 
-class Form103DataResponse(BaseModel):
-    """Complete Form 103 data response"""
-    document_id: int
-    filename: str
-    razon_social: str
-    periodo: str
-    fecha_recaudacion: str
-    line_items: List[Form103LineItemResponse]
-    totals: dict
-
-
-class Form104VentasResponse(BaseModel):
-    """Form 104 sales data"""
-    ventas_tarifa_diferente_cero_bruto: float
-    ventas_tarifa_diferente_cero_neto: float
-    impuesto_generado: float
-    total_ventas_bruto: float
-    total_ventas_neto: float
-    total_impuesto_generado: float
-
-
-class Form104ComprasResponse(BaseModel):
-    """Form 104 purchases data"""
-    adquisiciones_tarifa_diferente_cero_bruto: float
-    adquisiciones_tarifa_diferente_cero_neto: float
-    impuesto_compras: float
-    adquisiciones_tarifa_cero: float
-    total_adquisiciones: float
-    credito_tributario_aplicable: float
-
-
-class Form104TotalsResponse(BaseModel):
-    """Form 104 totals"""
-    impuesto_causado: float
-    retenciones_efectuadas: float
-    subtotal_a_pagar: float
-    total_impuesto_retenido: float
-    total_impuesto_pagar_retencion: float
-    total_consolidado_iva: float
-    total_pagado: float
-
-
-class Form104DataResponse(BaseModel):
-    """Complete Form 104 data response"""
-    document_id: int
-    filename: str
-    razon_social: str
-    periodo: str
-    fecha_recaudacion: str
-    ventas: Form104VentasResponse
-    compras: Form104ComprasResponse
-    retenciones_iva: List[dict]
-    totals: Form104TotalsResponse
-
-
-@router.get("/form-103/{document_id}", response_model=Form103DataResponse)
-async def get_form_103_data(
-    document_id: int,
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Get structured data from Form 103 (Retenciones)
-    
-    Returns all line items with BASE IMPONIBLE and VALOR RETENIDO
-    """
-    # Get document
-    doc_result = await db.execute(
-        select(Document).where(
-            Document.id == document_id,
-            Document.form_type == FormTypeEnum.FORM_103
-        )
-    )
+@router.get("/form-103/{document_id}")
+async def get_form_103_data(document_id: int, db: AsyncSession = Depends(get_db)):
+    """Get Form 103 data with complete line items"""
+    # Fetch document
+    doc_query = select(Document).where(Document.id == document_id, Document.form_type == FormTypeEnum.FORM_103)
+    doc_result = await db.execute(doc_query)
     document = doc_result.scalar_one_or_none()
     
     if not document:
         raise HTTPException(status_code=404, detail="Form 103 document not found")
     
-    # Get line items
-    items_result = await db.execute(
-        select(Form103LineItem)
-        .where(Form103LineItem.document_id == document_id)
-        .order_by(Form103LineItem.order_index)
-    )
+    # Fetch line items
+    items_query = select(Form103LineItem).where(Form103LineItem.document_id == document_id).order_by(Form103LineItem.order_index)
+    items_result = await db.execute(items_query)
     line_items = items_result.scalars().all()
     
+    # Fetch totals
+    totals_query = select(Form103Totals).where(Form103Totals.document_id == document_id)
+    totals_result = await db.execute(totals_query)
+    totals = totals_result.scalar_one_or_none()
+    
     # Build response
-    periodo = f"{document.periodo_mes} {document.periodo_anio}" if document.periodo_mes else "N/A"
-    fecha = document.fecha_recaudacion.strftime("%d-%m-%Y") if document.fecha_recaudacion else "N/A"
-    
-    return Form103DataResponse(
-        document_id=document.id,
-        filename=document.original_filename,
-        razon_social=document.razon_social or "N/A",
-        periodo=periodo,
-        fecha_recaudacion=fecha,
-        line_items=[
-            Form103LineItemResponse.from_orm(item) for item in line_items
+    return {
+        "document_id": document.id,
+        "filename": document.original_filename,
+        "razon_social": document.razon_social,
+        "periodo": f"{document.periodo_mes} {document.periodo_anio}" if document.periodo_mes else "N/A",
+        "fecha_recaudacion": document.fecha_recaudacion.isoformat() if document.fecha_recaudacion else "N/A",
+        "line_items": [
+            {
+                "id": item.id,
+                "concepto": item.concepto,
+                "codigo_base": item.codigo_base,
+                "base_imponible": item.base_imponible,
+                "codigo_retencion": item.codigo_retencion,
+                "valor_retenido": item.valor_retenido,
+                "order_index": item.order_index
+            }
+            for item in line_items
         ],
-        totals=document.parsed_data.get("totals", {}) if document.parsed_data else {}
-    )
+        "totals": {
+            "subtotal_operaciones": totals.subtotal_operaciones_pais if totals else 0.0,
+            "total_retencion": totals.total_retencion if totals else 0.0,
+            "total_impuesto_pagar": totals.total_impuesto_pagar if totals else 0.0,
+            "total_pagado": totals.total_pagado if totals else 0.0
+        } if totals else None
+    }
 
 
-@router.get("/form-104/{document_id}", response_model=Form104DataResponse)
-async def get_form_104_data(
-    document_id: int,
-    db: AsyncSession = Depends(get_db)
-):
+@router.get("/form-104/{document_id}")
+async def get_form_104_data(document_id: int, db: AsyncSession = Depends(get_db)):
     """
-    Get structured data from Form 104 (IVA)
-    
-    Returns sales, purchases, retentions, and totals
+    Get Form 104 data with COMPLETE parsed data
+    ✅ Returns ALL fields extracted by the parser (75+ fields)
     """
-    # Get document
-    doc_result = await db.execute(
-        select(Document).where(
-            Document.id == document_id,
-            Document.form_type == FormTypeEnum.FORM_104
-        )
-    )
+    # Fetch document
+    doc_query = select(Document).where(Document.id == document_id, Document.form_type == FormTypeEnum.FORM_104)
+    doc_result = await db.execute(doc_query)
     document = doc_result.scalar_one_or_none()
     
     if not document:
         raise HTTPException(status_code=404, detail="Form 104 document not found")
     
-    # Get Form104Data
-    data_result = await db.execute(
-        select(Form104Data).where(Form104Data.document_id == document_id)
-    )
+    # Fetch structured data from database
+    data_query = select(Form104Data).where(Form104Data.document_id == document_id)
+    data_result = await db.execute(data_query)
     form_data = data_result.scalar_one_or_none()
     
-    if not form_data:
-        raise HTTPException(status_code=404, detail="Form 104 data not found")
+    # ✅ NEW: Get COMPLETE parsed data from JSON field
+    parsed_data = document.parsed_data or {}
     
-    # Build response
-    periodo = f"{document.periodo_mes} {document.periodo_anio}" if document.periodo_mes else "N/A"
-    fecha = document.fecha_recaudacion.strftime("%d-%m-%Y") if document.fecha_recaudacion else "N/A"
+    # Build base response from database fields
+    response = {
+        "document_id": document.id,
+        "filename": document.original_filename,
+        "razon_social": document.razon_social,
+        "periodo": f"{document.periodo_mes} {document.periodo_anio}" if document.periodo_mes else "N/A",
+        "fecha_recaudacion": document.fecha_recaudacion.isoformat() if document.fecha_recaudacion else "N/A",
+    }
     
-    return Form104DataResponse(
-        document_id=document.id,
-        filename=document.original_filename,
-        razon_social=document.razon_social or "N/A",
-        periodo=periodo,
-        fecha_recaudacion=fecha,
-        ventas=Form104VentasResponse(
-            ventas_tarifa_diferente_cero_bruto=form_data.ventas_tarifa_diferente_cero_bruto,
-            ventas_tarifa_diferente_cero_neto=form_data.ventas_tarifa_diferente_cero_neto,
-            impuesto_generado=form_data.impuesto_generado,
-            total_ventas_bruto=form_data.total_ventas_bruto,
-            total_ventas_neto=form_data.total_ventas_neto,
-            total_impuesto_generado=form_data.total_impuesto_generado
-        ),
-        compras=Form104ComprasResponse(
-            adquisiciones_tarifa_diferente_cero_bruto=form_data.adquisiciones_tarifa_diferente_cero_bruto,
-            adquisiciones_tarifa_diferente_cero_neto=form_data.adquisiciones_tarifa_diferente_cero_neto,
-            impuesto_compras=form_data.impuesto_compras,
-            adquisiciones_tarifa_cero=form_data.adquisiciones_tarifa_cero,
-            total_adquisiciones=form_data.total_adquisiciones,
-            credito_tributario_aplicable=form_data.credito_tributario_aplicable
-        ),
-        retenciones_iva=form_data.retenciones_iva or [],
-        totals=Form104TotalsResponse(
-            impuesto_causado=form_data.impuesto_causado,
-            retenciones_efectuadas=form_data.retenciones_efectuadas,
-            subtotal_a_pagar=form_data.subtotal_a_pagar,
-            total_impuesto_retenido=form_data.total_impuesto_retenido,
-            total_impuesto_pagar_retencion=form_data.total_impuesto_pagar_retencion,
-            total_consolidado_iva=form_data.total_consolidado_iva,
-            total_pagado=form_data.total_pagado
-        )
-    )
+    if form_data:
+        # Start with database structured fields
+        response["ventas"] = {
+            "ventas_tarifa_diferente_cero_bruto": form_data.ventas_tarifa_diferente_cero_bruto,
+            "ventas_tarifa_diferente_cero_neto": form_data.ventas_tarifa_diferente_cero_neto,
+            "impuesto_generado": form_data.impuesto_generado,
+            "total_ventas_bruto": form_data.total_ventas_bruto,
+            "total_ventas_neto": form_data.total_ventas_neto,
+            "total_impuesto_generado": form_data.total_impuesto_generado
+        }
+        
+        response["compras"] = {
+            "adquisiciones_tarifa_diferente_cero_bruto": form_data.adquisiciones_tarifa_diferente_cero_bruto,
+            "adquisiciones_tarifa_diferente_cero_neto": form_data.adquisiciones_tarifa_diferente_cero_neto,
+            "impuesto_compras": form_data.impuesto_compras,
+            "adquisiciones_tarifa_cero": form_data.adquisiciones_tarifa_cero,
+            "total_adquisiciones": form_data.total_adquisiciones,
+            "credito_tributario_aplicable": form_data.credito_tributario_aplicable
+        }
+        
+        response["retenciones_iva"] = form_data.retenciones_iva or []
+        
+        response["totals"] = {
+            "impuesto_causado": form_data.impuesto_causado,
+            "retenciones_efectuadas": form_data.retenciones_efectuadas,
+            "subtotal_a_pagar": form_data.subtotal_a_pagar,
+            "total_impuesto_retenido": form_data.total_impuesto_retenido,
+            "total_impuesto_pagar_retencion": form_data.total_impuesto_pagar_retencion,
+            "total_consolidado_iva": form_data.total_consolidado_iva,
+            "total_pagado": form_data.total_pagado
+        }
+        
+        # ✅ NEW: MERGE with complete parsed data from JSON
+        # This adds ALL the fields that the parser extracted but aren't in the DB model
+        if parsed_data:
+            # Merge ventas fields
+            if "ventas" in parsed_data:
+                response["ventas"].update(parsed_data["ventas"])
+            
+            # Merge compras fields
+            if "compras" in parsed_data:
+                response["compras"].update(parsed_data["compras"])
+            
+            # Merge totals fields
+            if "totals" in parsed_data:
+                response["totals"].update(parsed_data["totals"])
+            
+            # Retenciones should already be complete from DB
+            if "retenciones_iva" in parsed_data and not response["retenciones_iva"]:
+                response["retenciones_iva"] = parsed_data["retenciones_iva"]
+    else:
+        # No structured data in database, return from parsed_data JSON only
+        response["ventas"] = parsed_data.get("ventas", {})
+        response["compras"] = parsed_data.get("compras", {})
+        response["retenciones_iva"] = parsed_data.get("retenciones_iva", [])
+        response["totals"] = parsed_data.get("totals", {})
+    
+    return response
 
 
 @router.get("/list-by-form-type/{form_type}")
 async def list_documents_by_form_type(
     form_type: str,
+    skip: int = 0,
+    limit: int = 100,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    List all documents of a specific form type
+    """List all documents of a specific form type"""
+    # Map string to enum
+    form_type_enum = FormTypeEnum.FORM_103 if form_type == "form_103" else FormTypeEnum.FORM_104
     
-    - **form_type**: "form_103" or "form_104"
-    """
-    try:
-        form_type_enum = FormTypeEnum(form_type)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid form type. Use 'form_103' or 'form_104'")
-    
-    # Get documents
-    result = await db.execute(
-        select(Document)
-        .where(Document.form_type == form_type_enum)
-        .order_by(Document.uploaded_at.desc())
-    )
+    query = select(Document).where(Document.form_type == form_type_enum).order_by(Document.uploaded_at.desc()).offset(skip).limit(limit)
+    result = await db.execute(query)
     documents = result.scalars().all()
     
-    # Build response
-    docs_list = []
-    for doc in documents:
-        periodo = f"{doc.periodo_mes} {doc.periodo_anio}" if doc.periodo_mes else "N/A"
-        fecha = doc.fecha_recaudacion.strftime("%d-%m-%Y") if doc.fecha_recaudacion else "N/A"
-        
-        docs_list.append({
+    return [
+        {
             "id": doc.id,
             "filename": doc.original_filename,
-            "razon_social": doc.razon_social or "N/A",
-            "periodo": periodo,
-            "fecha_recaudacion": fecha,
-            "processing_status": doc.processing_status.value,
-            "uploaded_at": doc.uploaded_at.isoformat() if doc.uploaded_at else None
-        })
-    
-    return {
-        "form_type": form_type,
-        "total": len(docs_list),
-        "documents": docs_list
-    }
+            "razon_social": doc.razon_social,
+            "periodo": f"{doc.periodo_mes} {doc.periodo_anio}" if doc.periodo_mes else "N/A",
+            "uploaded_at": doc.uploaded_at.isoformat() if doc.uploaded_at else None,
+            "processing_status": doc.processing_status.value
+        }
+        for doc in documents
+    ]

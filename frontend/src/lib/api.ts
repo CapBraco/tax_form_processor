@@ -88,4 +88,114 @@ export const listDocumentsByFormType = async (formType: 'form_103' | 'form_104')
   return response.data
 }
 
+import type {
+  ClientSummary,
+  ClientDocuments,
+  YearlySummary,
+  YearValidation,
+  PDFBranding
+} from '@/types'
+
+// Get all clients
+export const getAllClients = async (): Promise<ClientSummary[]> => {
+  const response = await api.get('/api/clientes/')
+  return response.data
+}
+
+// Get client documents organized by year/month
+export const getClientDocuments = async (razonSocial: string): Promise<ClientDocuments> => {
+  const response = await api.get(`/api/clientes/${encodeURIComponent(razonSocial)}`)
+  return response.data
+}
+
+// Get yearly summary with optional month exclusions
+export const getYearlySummary = async (
+  razonSocial: string,
+  year: string,
+  excludeMonths?: number[]
+): Promise<YearlySummary> => {
+  const params = excludeMonths && excludeMonths.length > 0
+    ? { exclude_months: excludeMonths.join(',') }
+    : {}
+  
+  const response = await api.get(
+    `/api/clientes/${encodeURIComponent(razonSocial)}/yearly-summary/${year}`,
+    { params }
+  )
+  return response.data
+}
+
+// Validate year completeness
+export const validateYearCompleteness = async (
+  razonSocial: string,
+  year: string
+): Promise<YearValidation> => {
+  const response = await api.get(
+    `/api/clientes/${encodeURIComponent(razonSocial)}/validation/${year}`
+  )
+  return response.data
+}
+
+// Export to Excel
+export const exportYearlyExcel = async (
+  razonSocial: string,
+  year: string,
+  excludeMonths?: number[]
+): Promise<void> => {
+  const params = excludeMonths && excludeMonths.length > 0
+    ? { exclude_months: excludeMonths.join(',') }
+    : {}
+  
+  const response = await api.post(
+    `/api/clientes/${encodeURIComponent(razonSocial)}/export-excel/${year}`,
+    {},
+    {
+      params,
+      responseType: 'blob'
+    }
+  )
+  
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', `${razonSocial.replace(/\s+/g, '_')}_${year}_summary.xlsx`)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+// Export to PDF with branding
+export const exportYearlyPDF = async (
+  razonSocial: string,
+  year: string,
+  branding: PDFBranding,
+  excludeMonths?: number[]
+): Promise<void> => {
+  const params = excludeMonths && excludeMonths.length > 0
+    ? { exclude_months: excludeMonths.join(',') }
+    : {}
+  
+  const response = await api.post(
+    `/api/clientes/${encodeURIComponent(razonSocial)}/export-pdf/${year}`,
+    branding,
+    {
+      params,
+      responseType: 'blob'
+    }
+  )
+  
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', `${razonSocial.replace(/\s+/g, '_')}_${year}_summary.pdf`)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+}
+
+
 export default api

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { getForm103Data, listDocumentsByFormType } from '@/lib/api'
-import { FileText, Download, ArrowLeft } from 'lucide-react'
+import { FileText, Download, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 
 export default function Form103Section() {
   const [documents, setDocuments] = useState<any[]>([])
@@ -10,6 +10,7 @@ export default function Form103Section() {
   const [formData, setFormData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [detailLoading, setDetailLoading] = useState(false)
+  const [hideZeroValues, setHideZeroValues] = useState(false) // ✅ NEW: Toggle state
 
   useEffect(() => {
     loadDocuments()
@@ -19,7 +20,7 @@ export default function Form103Section() {
     setLoading(true)
     try {
       const data = await listDocumentsByFormType('form_103')
-      setDocuments(data.documents)
+      setDocuments(data)
     } catch (error) {
       console.error('Error loading Form 103 documents:', error)
     } finally {
@@ -70,6 +71,12 @@ export default function Form103Section() {
     a.click()
   }
 
+  // ✅ NEW: Filter function for zero values
+  const filteredLineItems = formData?.line_items?.filter((item: any) => {
+    if (!hideZeroValues) return true
+    return item.base_imponible !== 0 || item.valor_retenido !== 0
+  }) || []
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -106,7 +113,9 @@ export default function Form103Section() {
                   </div>
                   <h3 className="font-medium text-gray-900 mb-1 truncate">{doc.filename}</h3>
                   <p className="text-sm text-gray-600 truncate">{doc.razon_social}</p>
-                  <p className="text-xs text-gray-500 mt-2">Fecha: {doc.fecha_recaudacion}</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {doc.uploaded_at ? `Uploaded: ${new Date(doc.uploaded_at).toLocaleDateString()}` : ''}
+                  </p>
                 </div>
               ))}
             </div>
@@ -135,6 +144,7 @@ export default function Form103Section() {
           </div>
         ) : formData ? (
           <>
+            {/* ✅ NEW: Header with Toggle and Export */}
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">{formData.filename}</h2>
@@ -143,16 +153,33 @@ export default function Form103Section() {
                   {formData.periodo} | Fecha: {formData.fecha_recaudacion}
                 </p>
               </div>
-              <button
-                onClick={exportToCSV}
-                className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-              >
-                <Download size={18} />
-                <span>Export CSV</span>
-              </button>
+              <div className="flex items-center gap-3">
+                {/* ✅ NEW: Zero Values Toggle */}
+                <button
+                  onClick={() => setHideZeroValues(!hideZeroValues)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                    hideZeroValues 
+                      ? 'bg-blue-600 text-white border-blue-600' 
+                      : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  {hideZeroValues ? <EyeOff size={18} /> : <Eye size={18} />}
+                  <span className="text-sm font-medium">
+                    {hideZeroValues ? 'Show All' : 'Hide Zeros'}
+                  </span>
+                </button>
+
+                <button
+                  onClick={exportToCSV}
+                  className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                >
+                  <Download size={18} />
+                  <span>Export CSV</span>
+                </button>
+              </div>
             </div>
 
-            {/* Line Items Table */}
+            {/* ✅ UPDATED: Line Items Table with Filter */}
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
@@ -175,7 +202,7 @@ export default function Form103Section() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {formData.line_items.map((item: any, index: number) => (
+                  {filteredLineItems.map((item: any, index: number) => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm text-gray-900">{item.concepto}</td>
                       <td className="px-4 py-3 text-sm text-center text-gray-700">
@@ -197,19 +224,26 @@ export default function Form103Section() {
                 <tfoot className="bg-gray-50 border-t-2 border-gray-300">
                   <tr>
                     <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900">
-                      TOTAL
+                      TOTAL {hideZeroValues && `(${filteredLineItems.length} of ${formData.line_items.length} items)`}
                     </td>
                     <td className="px-4 py-3 text-sm text-right font-bold text-blue-900">
-                      ${formData.line_items.reduce((sum: number, item: any) => sum + item.base_imponible, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${filteredLineItems.reduce((sum: number, item: any) => sum + item.base_imponible, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="px-4 py-3"></td>
                     <td className="px-4 py-3 text-sm text-right font-bold text-green-900">
-                      ${formData.line_items.reduce((sum: number, item: any) => sum + item.valor_retenido, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ${filteredLineItems.reduce((sum: number, item: any) => sum + item.valor_retenido, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
                 </tfoot>
               </table>
             </div>
+
+            {/* ✅ NEW: Filter indicator */}
+            {hideZeroValues && (
+              <div className="mt-2 text-sm text-gray-500 text-center">
+                Showing {filteredLineItems.length} items with non-zero values (hiding {formData.line_items.length - filteredLineItems.length} zero-value items)
+              </div>
+            )}
 
             {/* Summary Totals */}
             {formData.totals && (

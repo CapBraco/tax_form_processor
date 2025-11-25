@@ -1,6 +1,7 @@
 """
-Form 103 (Retenciones) Parser Service
-Extracts structured data from Ecuadorian Form 103 tax declarations
+Form 103 (Retenciones) Parser Service - UPDATED VERSION
+Extracts ALL structured data from Ecuadorian Form 103 tax declarations
+NOW INCLUDES: All rows, even with zero values
 """
 
 import re
@@ -13,7 +14,7 @@ class Form103Parser:
     
     def parse(self, text: str) -> Dict:
         """
-        Parse Form 103 and extract all structured data
+        Parse Form 103 and extract ALL structured data (including zero values)
         
         Returns:
             Dictionary with header, line items, and totals
@@ -55,52 +56,66 @@ class Form103Parser:
     
     def _extract_line_items(self, text: str) -> List[Dict]:
         """
-        Extract all line items with codes, base imponible, and valor retenido
+        Extract ALL line items with codes, base imponible, and valor retenido
+        ✅ UPDATED: Now extracts ALL rows including zero values
         
         Returns list of dictionaries with:
-        - codigo: Field code (302, 303, etc.)
         - concepto: Description of the concept
-        - base_imponible: Taxable base
+        - codigo_base: Base code (302, 303, etc.)
+        - base_imponible: Taxable base (including 0.00)
         - codigo_retencion: Retention code
-        - valor_retenido: Amount withheld
+        - valor_retenido: Amount withheld (including 0.00)
         """
         line_items = []
         
-        # Pattern to match lines with concept, codes and values
+        # Pattern to match lines with concept, codes and monetary values
         # Matches: Concept text | code | base_value | code | retention_value
+        # Only captures the MONETARY values (floats), not other codes
         pattern = r'([A-Za-zÁÉÍÓÚáéíóúñÑ\s\(\)\-,/\.]+?)\s+(\d{3,4})\s+([\d\.,]+)\s+(\d{3,4})\s+([\d\.,]+)'
         
         for match in re.finditer(pattern, text):
             concepto = match.group(1).strip()
             
             # Skip if it's a header or total line
-            if any(skip in concepto.upper() for skip in ['BASE IMPONIBLE', 'VALOR RETENIDO', 'TOTAL', 'SUBTOTAL']):
+            if any(skip in concepto.upper() for skip in [
+                'BASE IMPONIBLE', 
+                'VALOR RETENIDO', 
+                'TOTAL', 
+                'SUBTOTAL',
+                'CODIGO',
+                'CONCEPTO'
+            ]):
                 continue
             
-            # Clean up numeric values
+            # Clean up numeric values (remove thousand separators)
             base_str = match.group(3).replace(',', '')
             valor_str = match.group(5).replace(',', '')
             
             try:
+                # Convert to float - these are the MONETARY values only
                 base_imponible = float(base_str)
                 valor_retenido = float(valor_str)
                 
-                # Only include if there's actual value
-                if base_imponible > 0 or valor_retenido > 0:
-                    line_items.append({
-                        "concepto": concepto,
-                        "codigo_base": match.group(2),
-                        "base_imponible": base_imponible,
-                        "codigo_retencion": match.group(4),
-                        "valor_retenido": valor_retenido
-                    })
+                # ✅ CHANGED: Extract ALL rows, including zero values
+                # No filtering - store everything
+                line_items.append({
+                    "concepto": concepto,
+                    "codigo_base": match.group(2),  # This is a code, not a monetary value
+                    "base_imponible": base_imponible,  # Monetary value
+                    "codigo_retencion": match.group(4),  # This is a code, not a monetary value
+                    "valor_retenido": valor_retenido  # Monetary value
+                })
             except ValueError:
+                # Skip if conversion fails
                 continue
         
         return line_items
     
     def _extract_totals(self, text: str) -> Dict:
-        """Extract summary totals from the form"""
+        """
+        Extract summary totals from the form
+        ✅ UPDATED: Now includes all totals even if zero
+        """
         totals = {}
         
         patterns = {
@@ -115,12 +130,15 @@ class Form103Parser:
         for key, pattern in patterns.items():
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
-                # Get the last captured group (the amount)
+                # Get the last captured group (the monetary amount)
                 value_str = match.group(match.lastindex).replace(',', '')
                 try:
                     totals[key] = float(value_str)
                 except ValueError:
                     totals[key] = 0.0
+            else:
+                # If pattern not found, store as 0.0 (not skip it)
+                totals[key] = 0.0
         
         return totals
 

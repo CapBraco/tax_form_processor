@@ -1,14 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Dispatch, SetStateAction } from 'react'
 import { getDocumentsStats } from '@/lib/api'
-import { FileText, CheckCircle, Clock, AlertCircle, FileCheck, Calculator } from 'lucide-react'
+import UploadSection from './UploadSection'
+import DocumentsSection from './DocumentsSection'
+import Form103Section from './Form103Section'
+import Form104Section from './Form104Section'
+import ClientDetail from './ClientDetail'
+import { FileText, CheckCircle, Clock, AlertCircle } from 'lucide-react'
 
 interface DashboardProps {
-  onNavigate: (section: string) => void
+  activeSection: string
+  onNavigate: Dispatch<SetStateAction<string>>
+  selectedClient: string | null
+  onClientSelect: (razonSocial: string) => void
 }
 
-export default function Dashboard({ onNavigate }: DashboardProps) {
+export default function Dashboard({ activeSection, onNavigate, selectedClient, onClientSelect }: DashboardProps) {
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -27,6 +36,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     }
   }
 
+  const handleUploadSuccess = () => {
+    setRefreshTrigger(prev => prev + 1)
+    loadStats() // Refresh stats after upload
+    onNavigate('documents')
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -35,47 +50,124 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     )
   }
 
+  // Render main content based on active section
+  const renderMainContent = () => {
+    // CLIENT DETAIL VIEW - Show when client is selected
+    if (activeSection === 'clientes' && selectedClient) {
+      return <ClientDetail razonSocial={selectedClient} />
+    }
+
+    // Show message if clientes section but no client selected
+    if (activeSection === 'clientes' && !selectedClient) {
+      return (
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <div className="text-gray-400 mb-4">
+            <FileText className="w-16 h-16 mx-auto" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Selecciona un Cliente
+          </h3>
+          <p className="text-gray-600">
+            Elige un cliente de la barra lateral para ver sus documentos
+          </p>
+        </div>
+      )
+    }
+
+    // OTHER SECTIONS
+    switch (activeSection) {
+      case 'upload':
+        return <UploadSection onUploadSuccess={handleUploadSuccess} />
+      
+      case 'documents':
+        return <DocumentsSection refreshTrigger={refreshTrigger} />
+      
+      case 'form103':
+        return <Form103Section />
+      
+      case 'form104':
+        return <Form104Section />
+      
+      case 'dashboard':
+      default:
+        return <DashboardHome stats={stats} onNavigate={onNavigate} />
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Debug info in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-gray-100 border border-gray-300 rounded-lg p-3 text-xs font-mono">
+          <details>
+            <summary className="cursor-pointer font-semibold text-gray-700">
+              🐛 Debug Info (Development Only)
+            </summary>
+            <div className="mt-2 space-y-1 text-gray-600">
+              <div>Active Section: <span className="font-bold">{activeSection}</span></div>
+              <div>Selected Client: <span className="font-bold">{selectedClient || 'none'}</span></div>
+              <div>Stats Loaded: <span className="font-bold">{stats ? 'Yes' : 'No'}</span></div>
+            </div>
+          </details>
+        </div>
+      )}
+
+      {/* Main content area */}
+      {renderMainContent()}
+    </div>
+  )
+}
+
+// Separate component for dashboard home view
+interface DashboardHomeProps {
+  stats: any
+  onNavigate: (section: string) => void
+}
+
+function DashboardHome({ stats, onNavigate }: DashboardHomeProps) {
   const statCards = [
-    {
-      title: 'Total Documents',
-      value: stats?.total_documents || 0,
-      icon: FileText,
-      color: 'bg-blue-500',
-      textColor: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      onClick: () => onNavigate('documents')
+    { 
+      title: 'Total Documents', 
+      value: stats?.total_documents || 0, 
+      icon: FileText, 
+      bgColor: 'bg-blue-50', 
+      textColor: 'text-blue-600', 
+      onClick: () => onNavigate('documents') 
     },
-    {
-      title: 'Completed',
-      value: stats?.by_status?.completed || 0,
-      icon: CheckCircle,
-      color: 'bg-green-500',
-      textColor: 'text-green-600',
-      bgColor: 'bg-green-50',
-      onClick: () => onNavigate('documents')
+    { 
+      title: 'Completed', 
+      value: stats?.by_status?.completed || 0, 
+      icon: CheckCircle, 
+      bgColor: 'bg-green-50', 
+      textColor: 'text-green-600', 
+      onClick: () => onNavigate('documents') 
     },
-    {
-      title: 'Processing',
-      value: stats?.by_status?.processing || 0,
-      icon: Clock,
-      color: 'bg-yellow-500',
-      textColor: 'text-yellow-600',
-      bgColor: 'bg-yellow-50',
-      onClick: () => onNavigate('documents')
+    { 
+      title: 'Processing', 
+      value: stats?.by_status?.processing || 0, 
+      icon: Clock, 
+      bgColor: 'bg-yellow-50', 
+      textColor: 'text-yellow-600', 
+      onClick: () => onNavigate('documents') 
     },
-    {
-      title: 'Failed',
-      value: stats?.by_status?.failed || 0,
-      icon: AlertCircle,
-      color: 'bg-red-500',
-      textColor: 'text-red-600',
-      bgColor: 'bg-red-50',
-      onClick: () => onNavigate('documents')
+    { 
+      title: 'Failed', 
+      value: stats?.by_status?.failed || 0, 
+      icon: AlertCircle, 
+      bgColor: 'bg-red-50', 
+      textColor: 'text-red-600', 
+      onClick: () => onNavigate('documents') 
     },
   ]
 
   return (
     <div className="space-y-6">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-white">
+        <h1 className="text-3xl font-bold mb-2">Tax Forms Dashboard</h1>
+        <p className="text-blue-100">Gestiona y procesa tus formularios 103 y 104</p>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {statCards.map((card, index) => {
@@ -100,128 +192,52 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
         })}
       </div>
 
-      {/* Form Types */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Tax Forms by Type</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div 
-            onClick={() => onNavigate('form103')}
-            className="border-2 border-blue-200 rounded-lg p-6 hover:shadow-lg cursor-pointer transition-all hover:border-blue-400"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="bg-blue-100 p-4 rounded-lg">
-                <FileCheck className="text-blue-600" size={32} />
-              </div>
-              <div>
-                <h4 className="text-xl font-bold text-gray-900">Form 103</h4>
-                <p className="text-sm text-gray-600">Declaración de Retenciones</p>
-                <p className="text-xs text-gray-500 mt-1">Income Tax Withholdings</p>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-sm text-gray-600">View BASE IMPONIBLE & VALOR RETENIDO tables</p>
-            </div>
-          </div>
-
-          <div 
-            onClick={() => onNavigate('form104')}
-            className="border-2 border-purple-200 rounded-lg p-6 hover:shadow-lg cursor-pointer transition-all hover:border-purple-400"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="bg-purple-100 p-4 rounded-lg">
-                <Calculator className="text-purple-600" size={32} />
-              </div>
-              <div>
-                <h4 className="text-xl font-bold text-gray-900">Form 104</h4>
-                <p className="text-sm text-gray-600">Declaración de IVA</p>
-                <p className="text-xs text-gray-500 mt-1">VAT Declaration</p>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-sm text-gray-600">View Ventas, Compras & Retenciones</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Extraction Statistics */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Extraction Statistics</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="border rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Total Pages Extracted</span>
-              <FileText className="text-blue-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-blue-600">
-              {(stats?.total_pages_extracted || 0).toLocaleString()}
-            </p>
-          </div>
-
-          <div className="border rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-600">Total Characters Extracted</span>
-              <FileText className="text-green-600" size={20} />
-            </div>
-            <p className="text-2xl font-bold text-green-600">
-              {(stats?.total_characters_extracted || 0).toLocaleString()}
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Quick Actions */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button
             onClick={() => onNavigate('upload')}
-            className="flex items-center justify-center space-x-2 bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <FileText size={20} />
-            <span>Upload Forms</span>
+            <FileText className="w-5 h-5" />
+            Subir Documentos
           </button>
-          
           <button
             onClick={() => onNavigate('form103')}
-            className="flex items-center justify-center space-x-2 bg-blue-500 text-white px-6 py-4 rounded-lg hover:bg-blue-600 transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
           >
-            <FileCheck size={20} />
-            <span>View Form 103</span>
+            <CheckCircle className="w-5 h-5" />
+            Ver Form 103
           </button>
-          
           <button
             onClick={() => onNavigate('form104')}
-            className="flex items-center justify-center space-x-2 bg-purple-600 text-white px-6 py-4 rounded-lg hover:bg-purple-700 transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
-            <Calculator size={20} />
-            <span>View Form 104</span>
+            <CheckCircle className="w-5 h-5" />
+            Ver Form 104
           </button>
         </div>
       </div>
 
-      {/* Getting Started */}
-      {stats?.total_documents === 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">
-            Welcome to Enhanced PDF Processor! 🎉
-          </h3>
-          <p className="text-blue-700 mb-4">
-            Upload your Form 103 and Form 104 PDFs to automatically extract structured data 
-            including BASE IMPONIBLE, VALOR RETENIDO, Ventas, Compras, and more.
-          </p>
-          <ul className="text-sm text-blue-800 space-y-1 mb-4">
-            <li>✓ Automatic form type detection</li>
-            <li>✓ Extract line items into tables</li>
-            <li>✓ View structured data</li>
-            <li>✓ Export to CSV for accountants</li>
-          </ul>
-          <button
-            onClick={() => onNavigate('upload')}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Upload Your First Form
-          </button>
+      {/* Recent Activity - Optional */}
+      {stats?.recent_uploads && stats.recent_uploads.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Actividad Reciente</h2>
+          <div className="space-y-3">
+            {stats.recent_uploads.slice(0, 5).map((upload: any, index: number) => (
+              <div key={index} className="flex items-center justify-between py-2 border-b last:border-0">
+                <div className="flex items-center gap-3">
+                  <FileText className="w-4 h-4 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{upload.filename}</p>
+                    <p className="text-xs text-gray-500">{upload.razon_social}</p>
+                  </div>
+                </div>
+                <span className="text-xs text-gray-500">{upload.created_at}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
