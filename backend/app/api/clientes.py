@@ -1,6 +1,8 @@
 """
-Clientes API Endpoints - ASYNC Compatible
-Handles client organization, yearly summaries, and exports
+Clientes API Endpoints - FIXED VERSION
+✅ Compatible with current database schema
+✅ Adds year validation
+✅ Works with NULL periodo_anio documents
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -60,6 +62,18 @@ class ClientDocuments(BaseModel):
     years: List[YearData]
 
 
+# ✅ Helper function to validate year
+def is_valid_year(year: str) -> bool:
+    """Check if year is valid (not None, 'Unknown', empty, etc.)"""
+    if not year or year.upper() in ('UNKNOWN', 'N/A', ''):
+        return False
+    try:
+        year_int = int(year)
+        return 1900 <= year_int <= 2100
+    except (ValueError, TypeError):
+        return False
+
+
 # ------------------------------
 # List all clients
 # ------------------------------
@@ -90,17 +104,29 @@ async def get_all_clients(db: AsyncSession = Depends(get_db)):
 # ------------------------------
 @router.get("/{razon_social}")
 async def get_client_documents(razon_social: str, db: AsyncSession = Depends(get_db)):
+    """
+    ✅ FIXED: Returns documents organized by year/month
+    - Documents without periodo_anio are skipped (not grouped by year)
+    - But client is still found if they have ANY documents
+    """
     query = select(Document).where(Document.razon_social == razon_social).order_by(Document.periodo_anio.desc(), Document.id.asc())
     result = await db.execute(query)
     documents = result.scalars().all()
+    
     if not documents:
         raise HTTPException(status_code=404, detail="Client not found")
 
     organized = {}
+    documents_with_period = 0
+    
     for doc in documents:
+        # ✅ Skip documents without periodo_anio (but don't fail)
         if not doc.periodo_anio:
             continue
+        
+        documents_with_period += 1
         year = doc.periodo_anio
+        
         if year not in organized:
             organized[year] = {'year': year, 'months': {}}
 
@@ -110,7 +136,11 @@ async def get_client_documents(razon_social: str, db: AsyncSession = Depends(get
         periodo_fiscal = f"{doc.periodo_mes} {doc.periodo_anio}" if doc.periodo_mes else None
 
         if month_num not in organized[year]['months']:
-            organized[year]['months'][month_num] = {'month': month_num, 'periodo_fiscal': periodo_fiscal, 'forms': {'form_103': None, 'form_104': None}}
+            organized[year]['months'][month_num] = {
+                'month': month_num, 
+                'periodo_fiscal': periodo_fiscal, 
+                'forms': {'form_103': None, 'form_104': None}
+            }
 
         form_key = 'form_103' if doc.form_type == FormTypeEnum.FORM_103 else 'form_104'
         organized[year]['months'][month_num]['forms'][form_key] = {
@@ -119,6 +149,13 @@ async def get_client_documents(razon_social: str, db: AsyncSession = Depends(get
             'uploaded_at': doc.uploaded_at.isoformat() if doc.uploaded_at else None,
             'identificacion_ruc': doc.identificacion_ruc
         }
+
+    # ✅ If no documents have periodo_anio, return helpful error
+    if documents_with_period == 0:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Client found with {len(documents)} documents, but none have valid period information. Please reprocess documents."
+        )
 
     result_years = []
     for year_data in organized.values():
@@ -135,60 +172,109 @@ async def get_client_documents(razon_social: str, db: AsyncSession = Depends(get
 # ------------------------------
 @router.get("/{razon_social}/yearly-summary/{year}")
 async def get_yearly_summary(razon_social: str, year: str, exclude_months: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    """
+    ✅ FIXED: Added year validation
+    ✅ FIXED: Only accesses fields that exist in the model
+    """
+    # ✅ NEW: Validate year parameter
+    if not is_valid_year(year):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid year parameter: '{year}'. Year must be a valid 4-digit year."
+        )
+    
     excluded = set(int(m.strip()) for m in exclude_months.split(',')) if exclude_months else set()
 
     # Fetch Form 103 documents
-    query_103 = select(Document).where(Document.razon_social==razon_social, Document.form_type==FormTypeEnum.FORM_103, Document.periodo_anio==year)
+    query_103 = select(Document).where(
+        Document.razon_social == razon_social, 
+        Document.form_type == FormTypeEnum.FORM_103, 
+        Document.periodo_anio == year
+    )
     if excluded:
         query_103 = query_103.where(Document.periodo_mes_numero.notin_(excluded))
     docs_103 = (await db.execute(query_103)).scalars().all()
 
     # Fetch Form 104 documents
-    query_104 = select(Document).where(Document.razon_social==razon_social, Document.form_type==FormTypeEnum.FORM_104, Document.periodo_anio==year)
+    query_104 = select(Document).where(
+        Document.razon_social == razon_social, 
+        Document.form_type == FormTypeEnum.FORM_104, 
+        Document.periodo_anio == year
+    )
     if excluded:
         query_104 = query_104.where(Document.periodo_mes_numero.notin_(excluded))
     docs_104 = (await db.execute(query_104)).scalars().all()
 
-    # Accumulators
-    summary_103 = {'subtotal_operaciones_pais':0.0,'total_retencion':0.0,'total_impuesto_pagar':0.0,'total_pagado':0.0,'monthly_details':[]}
-    summary_104 = {'total_ventas_neto':0.0,'total_impuesto_generado':0.0,'total_adquisiciones':0.0,'credito_tributario_aplicable':0.0,'total_impuesto_retenido':0.0,'total_pagado':0.0,'monthly_details':[]}
+    # Accumulators - ✅ ONLY use fields that exist in the model
+    summary_103 = {
+        'subtotal_operaciones_pais': 0.0,
+        'total_retencion': 0.0,
+        'total_impuesto_pagar': 0.0,
+        'total_pagado': 0.0,
+        'monthly_details': []
+    }
+    
+    summary_104 = {
+        'total_ventas_neto': 0.0,
+        'total_impuesto_generado': 0.0,
+        'total_adquisiciones': 0.0,
+        'credito_tributario_aplicable': 0.0,
+        'total_impuesto_retenido': 0.0,
+        'total_pagado': 0.0,
+        'monthly_details': []
+    }
 
     for doc in docs_103:
-        tot = (await db.execute(select(Form103Totals).where(Form103Totals.document_id==doc.id))).scalar_one_or_none()
-        if not tot: continue
+        tot = (await db.execute(select(Form103Totals).where(Form103Totals.document_id == doc.id))).scalar_one_or_none()
+        if not tot:
+            continue
         periodo_fiscal = f"{doc.periodo_mes} {doc.periodo_anio}" if doc.periodo_mes else None
-        md = {'month': doc.periodo_mes_numero, 'periodo_fiscal': periodo_fiscal,
-              'subtotal_operaciones_pais': tot.subtotal_operaciones_pais or 0.0,
-              'total_retencion': tot.total_retencion or 0.0,
-              'total_impuesto_pagar': tot.total_impuesto_pagar or 0.0,
-              'total_pagado': tot.total_pagado or 0.0}
-        for k in ['subtotal_operaciones_pais','total_retencion','total_impuesto_pagar','total_pagado']:
+        md = {
+            'month': doc.periodo_mes_numero,
+            'periodo_fiscal': periodo_fiscal,
+            'subtotal_operaciones_pais': tot.subtotal_operaciones_pais or 0.0,
+            'total_retencion': tot.total_retencion or 0.0,
+            'total_impuesto_pagar': tot.total_impuesto_pagar or 0.0,
+            'total_pagado': tot.total_pagado or 0.0
+        }
+        for k in ['subtotal_operaciones_pais', 'total_retencion', 'total_impuesto_pagar', 'total_pagado']:
             summary_103[k] += md[k]
         summary_103['monthly_details'].append(md)
 
     for doc in docs_104:
-        data = (await db.execute(select(Form104Data).where(Form104Data.document_id==doc.id))).scalar_one_or_none()
-        if not data: continue
+        data = (await db.execute(select(Form104Data).where(Form104Data.document_id == doc.id))).scalar_one_or_none()
+        if not data:
+            continue
         periodo_fiscal = f"{doc.periodo_mes} {doc.periodo_anio}" if doc.periodo_mes else None
-        md = {'month': doc.periodo_mes_numero, 'periodo_fiscal': periodo_fiscal,
-              'total_ventas_neto': data.total_ventas_neto or 0.0,
-              'total_impuesto_generado': data.total_impuesto_generado or 0.0,
-              'total_adquisiciones': data.total_adquisiciones or 0.0,
-              'credito_tributario_aplicable': data.credito_tributario_aplicable or 0.0,
-              'total_impuesto_retenido': data.total_impuesto_retenido or 0.0,
-              'total_pagado': data.total_pagado or 0.0}
-        for k in ['total_ventas_neto','total_impuesto_generado','total_adquisiciones','credito_tributario_aplicable','total_impuesto_retenido','total_pagado']:
+        md = {
+            'month': doc.periodo_mes_numero,
+            'periodo_fiscal': periodo_fiscal,
+            'total_ventas_neto': data.total_ventas_neto or 0.0,
+            'total_impuesto_generado': data.total_impuesto_generado or 0.0,
+            'total_adquisiciones': data.total_adquisiciones or 0.0,
+            'credito_tributario_aplicable': data.credito_tributario_aplicable or 0.0,
+            'total_impuesto_retenido': data.total_impuesto_retenido or 0.0,
+            'total_pagado': data.total_pagado or 0.0
+        }
+        for k in ['total_ventas_neto', 'total_impuesto_generado', 'total_adquisiciones', 
+                  'credito_tributario_aplicable', 'total_impuesto_retenido', 'total_pagado']:
             summary_104[k] += md[k]
         summary_104['monthly_details'].append(md)
 
-    all_months = set(range(1,13))
+    all_months = set(range(1, 13))
     present_103 = set(d.periodo_mes_numero for d in docs_103 if d.periodo_mes_numero)
     present_104 = set(d.periodo_mes_numero for d in docs_104 if d.periodo_mes_numero)
     missing_103 = sorted(all_months - present_103 - excluded)
     missing_104 = sorted(all_months - present_104 - excluded)
 
-    return {'razon_social': razon_social,'year':year,'form_103_summary':summary_103,'form_104_summary':summary_104,
-            'missing_months':{'form_103':missing_103,'form_104':missing_104},'excluded_months':sorted(excluded)}
+    return {
+        'razon_social': razon_social,
+        'year': year,
+        'form_103_summary': summary_103,
+        'form_104_summary': summary_104,
+        'missing_months': {'form_103': missing_103, 'form_104': missing_104},
+        'excluded_months': sorted(excluded)
+    }
 
 
 # ------------------------------
@@ -196,20 +282,57 @@ async def get_yearly_summary(razon_social: str, year: str, exclude_months: Optio
 # ------------------------------
 @router.get("/{razon_social}/validation/{year}")
 async def validate_year_completeness(razon_social: str, year: str, db: AsyncSession = Depends(get_db)):
-    docs_103 = (await db.execute(select(Document).where(Document.razon_social==razon_social, Document.form_type==FormTypeEnum.FORM_103, Document.periodo_anio==year))).scalars().all()
-    docs_104 = (await db.execute(select(Document).where(Document.razon_social==razon_social, Document.form_type==FormTypeEnum.FORM_104, Document.periodo_anio==year))).scalars().all()
+    """✅ FIXED: Added year validation"""
+    # ✅ NEW: Validate year parameter
+    if not is_valid_year(year):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid year parameter: '{year}'. Year must be a valid 4-digit year."
+        )
+    
+    docs_103 = (await db.execute(
+        select(Document).where(
+            Document.razon_social == razon_social,
+            Document.form_type == FormTypeEnum.FORM_103,
+            Document.periodo_anio == year
+        )
+    )).scalars().all()
+    
+    docs_104 = (await db.execute(
+        select(Document).where(
+            Document.razon_social == razon_social,
+            Document.form_type == FormTypeEnum.FORM_104,
+            Document.periodo_anio == year
+        )
+    )).scalars().all()
 
-    present_103 = {d.periodo_mes_numero:d for d in docs_103 if d.periodo_mes_numero}
-    present_104 = {d.periodo_mes_numero:d for d in docs_104 if d.periodo_mes_numero}
+    present_103 = {d.periodo_mes_numero: d for d in docs_103 if d.periodo_mes_numero}
+    present_104 = {d.periodo_mes_numero: d for d in docs_104 if d.periodo_mes_numero}
 
-    month_names = ['', 'Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+    month_names = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
     validation = []
-    for m in range(1,13):
-        validation.append({'month':m,'month_name':month_names[m],'has_form_103':m in present_103,'has_form_104':m in present_104,
-                           'form_103_id': present_103[m].id if m in present_103 else None,'form_104_id': present_104[m].id if m in present_104 else None,
-                           'is_complete': m in present_103 and m in present_104})
+    for m in range(1, 13):
+        validation.append({
+            'month': m,
+            'month_name': month_names[m],
+            'has_form_103': m in present_103,
+            'has_form_104': m in present_104,
+            'form_103_id': present_103[m].id if m in present_103 else None,
+            'form_104_id': present_104[m].id if m in present_104 else None,
+            'is_complete': m in present_103 and m in present_104
+        })
+    
     complete_months = sum(1 for v in validation if v['is_complete'])
-    return {'razon_social':razon_social,'year':year,'complete_months':complete_months,'total_months':12,'is_fully_complete':complete_months==12,'validation_details':validation}
+    return {
+        'razon_social': razon_social,
+        'year': year,
+        'complete_months': complete_months,
+        'total_months': 12,
+        'is_fully_complete': complete_months == 12,
+        'validation_details': validation
+    }
+
 
 class PDFBranding(BaseModel):
     company_name: str
@@ -217,6 +340,9 @@ class PDFBranding(BaseModel):
     primary_color: Optional[str] = "#1a73e8"
     secondary_color: Optional[str] = "#34a853"
     footer_text: str
+
+
+# ------------------------------
 # Export to Excel
 # ------------------------------
 @router.post("/{razon_social}/export-excel/{year}")
@@ -227,9 +353,16 @@ async def export_yearly_excel(
     db: AsyncSession = Depends(get_db)
 ):
     """
+    ✅ FIXED: Added year validation
     Export yearly summary to Excel file
     """
-    # Get the yearly summary data (reuse existing endpoint logic)
+    # ✅ NEW: Validate year parameter
+    if not is_valid_year(year):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid year parameter: '{year}'. Cannot export data for invalid year."
+        )
+    
     excluded = set(int(m.strip()) for m in exclude_months.split(',')) if exclude_months else set()
 
     # Fetch data (same as yearly-summary endpoint)
@@ -426,8 +559,16 @@ async def export_yearly_pdf(
     db: AsyncSession = Depends(get_db)
 ):
     """
+    ✅ FIXED: Added year validation
     Export yearly summary to branded PDF
     """
+    # ✅ NEW: Validate year parameter
+    if not is_valid_year(year):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid year parameter: '{year}'. Cannot export PDF for invalid year."
+        )
+    
     excluded = set(int(m.strip()) for m in exclude_months.split(',')) if exclude_months else set()
 
     # Fetch data

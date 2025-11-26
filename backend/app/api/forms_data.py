@@ -1,6 +1,6 @@
 """
 Updated Forms Data API Endpoints
-Returns COMPLETE Form 104 data by merging structured DB fields with full JSON parsed_data
+✅ NOW INCLUDES: Codes 332, 3440, 3940 in Form 103 responses
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,7 +16,10 @@ router = APIRouter(tags=["forms-data"])
 
 @router.get("/form-103/{document_id}")
 async def get_form_103_data(document_id: int, db: AsyncSession = Depends(get_db)):
-    """Get Form 103 data with complete line items"""
+    """
+    Get Form 103 data with complete line items and ALL totals
+    ✅ NOW INCLUDES: Code 332, 3440, 3940
+    """
     # Fetch document
     doc_query = select(Document).where(Document.id == document_id, Document.form_type == FormTypeEnum.FORM_103)
     doc_result = await db.execute(doc_query)
@@ -54,10 +57,14 @@ async def get_form_103_data(document_id: int, db: AsyncSession = Depends(get_db)
             }
             for item in line_items
         ],
+        # ✅ UPDATED: Now includes ALL 7 fields
         "totals": {
             "subtotal_operaciones": totals.subtotal_operaciones_pais if totals else 0.0,
+            "subtotal_retencion": totals.subtotal_retencion if totals else 0.0,  # ✅ Code 332
             "total_retencion": totals.total_retencion if totals else 0.0,
             "total_impuesto_pagar": totals.total_impuesto_pagar if totals else 0.0,
+            "interes_mora": totals.interes_mora if totals else 0.0,  # ✅ Code 3440
+            "multa": totals.multa if totals else 0.0,  # ✅ Code 3940
             "total_pagado": totals.total_pagado if totals else 0.0
         } if totals else None
     }

@@ -18,6 +18,14 @@ const MONTH_NAMES = [
 
 type ViewMode = 'overview' | 'form103' | 'form104' | 'yearly-summary'
 
+// ✅ NEW: Helper function to validate year
+function isValidYear(year: string | null): boolean {
+  if (!year) return false
+  if (year.toUpperCase() === 'UNKNOWN' || year.toUpperCase() === 'N/A') return false
+  const yearNum = parseInt(year, 10)
+  return !isNaN(yearNum) && yearNum >= 1900 && yearNum <= 2100
+}
+
 export default function ClientDetail({ razonSocial }: ClientDetailProps) {
   const [data, setData] = useState<ClientDocuments | null>(null)
   const [loading, setLoading] = useState(true)
@@ -49,22 +57,30 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
       const clientData = await getClientDocuments(razonSocial)
       console.log('📦 Received client data:', clientData)
       
-      if (!clientData || !clientData.years) {
+      if (!clientData || !clientData.years || clientData.years.length === 0) {
         console.warn('⚠️ No years data in response:', clientData)
-        setError('No se encontraron datos para este cliente')
+        setError('No se encontraron datos con períodos válidos para este cliente')
         setData(null)
       } else {
         setData(clientData)
         
-        // Auto-select the most recent year
-        if (clientData.years.length > 0) {
-          setSelectedYear(clientData.years[0].year)
-          console.log('✅ Auto-selected year:', clientData.years[0].year)
+        // ✅ FIX: Auto-select the most recent VALID year
+        const firstValidYear = clientData.years.find((y: any) => isValidYear(y.year))
+        if (firstValidYear) {
+          setSelectedYear(firstValidYear.year)
+          console.log('✅ Auto-selected year:', firstValidYear.year)
+        } else {
+          console.warn('⚠️ No valid years found in data')
+          setError('No se encontraron períodos válidos en los documentos')
         }
       }
     } catch (err) {
       console.error('❌ Error loading client data:', err)
-      setError(err instanceof Error ? err.message : 'Error desconocido al cargar datos')
+      if (err instanceof Error && err.message.includes('no documents have valid period information')) {
+        setError('Este cliente tiene documentos sin información de período válida. Por favor, reprocese los documentos.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Error desconocido al cargar datos')
+      }
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -111,6 +127,11 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
   }
 
   const handleShowSummary = (year: string) => {
+    // ✅ FIX: Validate year before showing summary
+    if (!isValidYear(year)) {
+      alert(`No se puede mostrar el resumen para el año "${year}". El período no es válido.`)
+      return
+    }
     setSelectedYear(year)
     setViewMode('yearly-summary')
   }
@@ -123,18 +144,18 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <p className="text-gray-500 text-sm">Cargando documentos del cliente...</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Cargando documentos del cliente...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-500 space-y-4">
+      <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400 space-y-4">
         <AlertCircle className="w-12 h-12 text-red-400" />
         <div className="text-center">
-          <p className="font-medium text-red-600">Error al cargar datos</p>
-          <p className="text-sm mt-1 text-gray-600">{error}</p>
+          <p className="font-medium text-red-600 dark:text-red-400">Error al cargar datos</p>
+          <p className="text-sm mt-1 text-gray-600 dark:text-gray-400 max-w-md">{error}</p>
           <button
             onClick={handleRefresh}
             className="mt-4 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 mx-auto"
@@ -149,7 +170,7 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
 
   if (!data) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 text-gray-500 space-y-4">
+      <div className="flex flex-col items-center justify-center h-64 text-gray-500 dark:text-gray-400 space-y-4">
         <AlertCircle className="w-12 h-12 text-red-400" />
         <div className="text-center">
           <p className="font-medium">No se pudieron cargar los datos del cliente</p>
@@ -167,12 +188,12 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
   }
 
   // Show Yearly Summary
-  if (viewMode === 'yearly-summary' && selectedYear) {
+  if (viewMode === 'yearly-summary' && selectedYear && isValidYear(selectedYear)) {
     return (
       <div className="relative">
         <button
           onClick={handleBackFromSummary}
-          className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
+          className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-4"
         >
           <ArrowLeft size={20} className="mr-2" />
           Volver a la vista general
@@ -203,11 +224,11 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
   return (
     <div className="space-y-6">
       {/* Client Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 rounded-lg shadow-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">{data.razon_social}</h1>
-            <p className="text-blue-100">Documentos fiscales organizados por período</p>
+            <p className="text-blue-100 dark:text-blue-200">Documentos fiscales organizados por período</p>
           </div>
           <div className="flex items-center gap-4">
             <button
@@ -220,30 +241,19 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
               <span className="text-sm">Actualizar</span>
             </button>
             <div className="text-right">
-              <div className="text-sm text-blue-100">Total de años</div>
+              <div className="text-sm text-blue-100 dark:text-blue-200">Total de años</div>
               <div className="text-3xl font-bold">{data.years.length}</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Debug Info - Remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-gray-100 border border-gray-300 rounded-lg p-4 text-xs">
-          <details>
-            <summary className="font-semibold cursor-pointer text-gray-700">
-              🐛 Debug Info (Development Only)
-            </summary>
-            <pre className="mt-2 overflow-auto max-h-40 text-gray-600">
-              {JSON.stringify({ razonSocial, years: data.years.length, data }, null, 2)}
-            </pre>
-          </details>
-        </div>
-      )}
-
       {/* Years Overview */}
       {data.years.length > 0 ? (
         data.years.map((yearData) => {
+          // ✅ FIX: Check if year is valid before rendering
+          const yearIsValid = isValidYear(yearData.year)
+          
           const totalMonths = yearData.months.length
           const completeMonths = yearData.months.filter(m => 
             m.forms.form_103 !== null && m.forms.form_104 !== null
@@ -251,17 +261,22 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
           const completionRate = Math.round((completeMonths / totalMonths) * 100)
 
           return (
-            <div key={yearData.year} className="bg-white rounded-lg shadow-lg overflow-hidden">
+            <div key={yearData.year} className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
               {/* Year Header */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 p-6">
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="bg-blue-100 rounded-full p-3">
-                      <Calendar className="w-6 h-6 text-blue-600" />
+                    <div className="bg-blue-100 dark:bg-blue-900 rounded-full p-3">
+                      <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">Año {yearData.year}</h2>
-                      <p className="text-sm text-gray-600">
+                      <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        Año {yearData.year}
+                        {!yearIsValid && (
+                          <span className="ml-2 text-sm text-red-500 dark:text-red-400">(Período inválido)</span>
+                        )}
+                      </h2>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         {completeMonths} de {totalMonths} meses completos
                       </p>
                     </div>
@@ -270,26 +285,33 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
                   <div className="flex items-center gap-4">
                     {/* Completion Badge */}
                     <div className="text-right">
-                      <div className="text-sm text-gray-600 mb-1">Completitud</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Completitud</div>
                       <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
                         completionRate === 100 
-                          ? 'bg-green-100 text-green-800' 
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' 
                           : completionRate >= 50 
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400'
+                          : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400'
                       }`}>
                         {completionRate}%
                       </div>
                     </div>
 
                     {/* Summary Button */}
-                    <button
-                      onClick={() => handleShowSummary(yearData.year)}
-                      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
-                    >
-                      <TrendingUp className="w-5 h-5" />
-                      <span className="font-medium">Ver Resumen Anual</span>
-                    </button>
+                    {yearIsValid ? (
+                      <button
+                        onClick={() => handleShowSummary(yearData.year)}
+                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
+                      >
+                        <TrendingUp className="w-5 h-5" />
+                        <span className="font-medium">Ver Resumen Anual</span>
+                      </button>
+                    ) : (
+                      <div className="px-6 py-3 bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded-lg cursor-not-allowed" title="No se puede generar resumen para período inválido">
+                        <TrendingUp className="w-5 h-5 inline mr-2" />
+                        <span className="font-medium">Resumen No Disponible</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -311,13 +333,13 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
         })
       ) : (
         /* Empty State */
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+          <FileText className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
             No hay documentos disponibles
           </h3>
-          <p className="text-gray-600 mb-4">
-            No se encontraron documentos fiscales para este cliente
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            No se encontraron documentos fiscales con períodos válidos para este cliente
           </p>
           <button
             onClick={handleRefresh}
@@ -346,8 +368,8 @@ function MonthCard({ monthData, onViewForm }: MonthCardProps) {
     <div className={`
       relative rounded-lg border-2 transition-all duration-200 hover:shadow-lg
       ${isComplete 
-        ? 'bg-white border-green-200 hover:border-green-300' 
-        : 'bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300 hover:border-yellow-400'
+        ? 'bg-white dark:bg-gray-800 border-green-200 dark:border-green-800 hover:border-green-300 dark:hover:border-green-700' 
+        : 'bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-300 dark:border-yellow-700 hover:border-yellow-400 dark:hover:border-yellow-600'
       }
     `}>
       {/* Status Badge */}
@@ -366,10 +388,10 @@ function MonthCard({ monthData, onViewForm }: MonthCardProps) {
       <div className="p-5">
         {/* Month Header */}
         <div className="mb-4">
-          <h3 className="text-lg font-bold text-gray-900">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
             {MONTH_NAMES[monthData.month]}
           </h3>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {monthData.periodo_fiscal || 'Sin período'}
           </p>
         </div>
@@ -394,8 +416,8 @@ function MonthCard({ monthData, onViewForm }: MonthCardProps) {
 
         {/* Completion Status */}
         {!isComplete && (
-          <div className="mt-4 pt-4 border-t border-yellow-200">
-            <div className="flex items-center gap-2 text-xs text-yellow-700">
+          <div className="mt-4 pt-4 border-t border-yellow-200 dark:border-yellow-800">
+            <div className="flex items-center gap-2 text-xs text-yellow-700 dark:text-yellow-400">
               <AlertCircle className="w-3.5 h-3.5" />
               <span className="font-medium">Documentos pendientes</span>
             </div>
@@ -417,14 +439,14 @@ interface FormStatusButtonProps {
 function FormStatusButton({ formType, formName, formData, onView, color }: FormStatusButtonProps) {
   const colorClasses = {
     blue: {
-      available: 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700',
-      unavailable: 'bg-gray-50 border-gray-200 text-gray-400',
-      icon: 'text-blue-600'
+      available: 'bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400',
+      unavailable: 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500',
+      icon: 'text-blue-600 dark:text-blue-400'
     },
     purple: {
-      available: 'bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700',
-      unavailable: 'bg-gray-50 border-gray-200 text-gray-400',
-      icon: 'text-purple-600'
+      available: 'bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-400',
+      unavailable: 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-400 dark:text-gray-500',
+      icon: 'text-purple-600 dark:text-purple-400'
     }
   }
 
@@ -511,10 +533,10 @@ function Form103DetailView({ formData, onBack, formLoading }: FormDetailViewProp
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
         <button
           onClick={onBack}
-          className="flex items-center text-blue-600 hover:text-blue-800 mb-4"
+          className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-4"
         >
           <ArrowLeft size={20} className="mr-2" />
           Volver a la vista general
@@ -522,9 +544,9 @@ function Form103DetailView({ formData, onBack, formLoading }: FormDetailViewProp
 
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{formData.filename}</h2>
-            <p className="text-gray-600">{formData.razon_social}</p>
-            <p className="text-sm text-gray-500">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formData.filename}</h2>
+            <p className="text-gray-600 dark:text-gray-400">{formData.razon_social}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-500">
               {formData.periodo} | Fecha: {formData.fecha_recaudacion}
             </p>
           </div>
@@ -535,7 +557,7 @@ function Form103DetailView({ formData, onBack, formLoading }: FormDetailViewProp
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
                 hideZeroValues
                   ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
               }`}
             >
               {hideZeroValues ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -557,37 +579,37 @@ function Form103DetailView({ formData, onBack, formLoading }: FormDetailViewProp
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
-              <tr className="bg-gray-100 border-b-2 border-gray-300">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Concepto</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Código Base</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">BASE IMPONIBLE</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Código Ret.</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">VALOR RETENIDO</th>
+              <tr className="bg-gray-100 dark:bg-gray-700 border-b-2 border-gray-300 dark:border-gray-600">
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Concepto</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Código Base</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">BASE IMPONIBLE</th>
+                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Código Ret.</th>
+                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">VALOR RETENIDO</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {filteredLineItems.map((item: any) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-900">{item.concepto}</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-700">{item.codigo_base}</td>
-                  <td className="px-4 py-3 text-sm text-right font-medium text-blue-700">
+                <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{item.concepto}</td>
+                  <td className="px-4 py-3 text-sm text-center text-gray-700 dark:text-gray-300">{item.codigo_base}</td>
+                  <td className="px-4 py-3 text-sm text-right font-medium text-blue-700 dark:text-blue-400">
                     ${item.base_imponible.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-700">{item.codigo_retencion}</td>
-                  <td className="px-4 py-3 text-sm text-right font-medium text-green-700">
+                  <td className="px-4 py-3 text-sm text-center text-gray-700 dark:text-gray-300">{item.codigo_retencion}</td>
+                  <td className="px-4 py-3 text-sm text-right font-medium text-green-700 dark:text-green-400">
                     ${item.valor_retenido.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-gray-50 border-t-2 border-gray-300">
+            <tfoot className="bg-gray-50 dark:bg-gray-700 border-t-2 border-gray-300 dark:border-gray-600">
               <tr>
-                <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900">TOTAL</td>
-                <td className="px-4 py-3 text-sm text-right font-bold text-blue-900">
+                <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">TOTAL</td>
+                <td className="px-4 py-3 text-sm text-right font-bold text-blue-900 dark:text-blue-400">
                   ${filteredLineItems.reduce((sum: number, item: any) => sum + item.base_imponible, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 <td className="px-4 py-3"></td>
-                <td className="px-4 py-3 text-sm text-right font-bold text-green-900">
+                <td className="px-4 py-3 text-sm text-right font-bold text-green-900 dark:text-green-400">
                   ${filteredLineItems.reduce((sum: number, item: any) => sum + item.valor_retenido, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
@@ -597,10 +619,10 @@ function Form103DetailView({ formData, onBack, formLoading }: FormDetailViewProp
 
         {/* Filter Info Message */}
         {hideZeroValues && formData.line_items && (
-          <div className="mt-3 text-sm text-gray-600">
+          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
             Mostrando {filteredLineItems.length} de {formData.line_items.length} items 
             {filteredLineItems.length < formData.line_items.length && (
-              <span className="ml-1 text-blue-600">
+              <span className="ml-1 text-blue-600 dark:text-blue-400">
                 (ocultando {formData.line_items.length - filteredLineItems.length} items con valores en cero)
               </span>
             )}
@@ -610,27 +632,27 @@ function Form103DetailView({ formData, onBack, formLoading }: FormDetailViewProp
         {/* Summary Totals */}
         {formData.totals && (
           <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="border rounded-lg p-4 bg-blue-50">
-              <p className="text-sm text-gray-600">Subtotal Operaciones País</p>
-              <p className="text-xl font-bold text-blue-700">
+            <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Subtotal Operaciones País</p>
+              <p className="text-xl font-bold text-blue-700 dark:text-blue-400">
                 ${formData.totals.subtotal_operaciones?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="border rounded-lg p-4 bg-green-50">
-              <p className="text-sm text-gray-600">Total Retención</p>
-              <p className="text-xl font-bold text-green-700">
+            <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/20 dark:border-green-800">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Total Retención</p>
+              <p className="text-xl font-bold text-green-700 dark:text-green-400">
                 ${formData.totals.total_retencion?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="border rounded-lg p-4 bg-yellow-50">
-              <p className="text-sm text-gray-600">Total Impuesto a Pagar</p>
-              <p className="text-xl font-bold text-yellow-700">
+            <div className="border rounded-lg p-4 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Total Impuesto a Pagar</p>
+              <p className="text-xl font-bold text-yellow-700 dark:text-yellow-400">
                 ${formData.totals.total_impuesto_pagar?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="border rounded-lg p-4 bg-purple-50">
-              <p className="text-sm text-gray-600">Total Pagado</p>
-              <p className="text-xl font-bold text-purple-700">
+            <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-800">
+              <p className="text-sm text-gray-600 dark:text-gray-400">Total Pagado</p>
+              <p className="text-xl font-bold text-purple-700 dark:text-purple-400">
                 ${formData.totals.total_pagado?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
               </p>
             </div>

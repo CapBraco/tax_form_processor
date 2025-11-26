@@ -1,6 +1,6 @@
 """
 Enhanced Database Models - COMPATIBLE with original project
-Adds Clientes feature fields while maintaining existing structure
+✅ UPDATED Form103Totals with ALL 10 fields
 """
 
 from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey, JSON, Enum
@@ -53,19 +53,19 @@ class Document(Base):
     numero_serial = Column(String(100), nullable=True)
     fecha_recaudacion = Column(DateTime(timezone=True), nullable=True)
     identificacion_ruc = Column(String(50), nullable=True, index=True)
-    razon_social = Column(String(500), nullable=True, index=True)  # Already exists! Just add index
-    periodo_mes = Column(String(20), nullable=True, index=True)    # Already exists! Just add index
-    periodo_anio = Column(String(10), nullable=True, index=True)   # Already exists! Keep index
+    razon_social = Column(String(500), nullable=True, index=True)
+    periodo_mes = Column(String(20), nullable=True, index=True)
+    periodo_anio = Column(String(10), nullable=True, index=True)
     
-    # NEW FIELDS FOR CLIENTES FEATURE - Add these columns
-    periodo_fiscal_completo = Column(String(50), nullable=True)  # e.g., "ABRIL 2025"
-    periodo_mes_numero = Column(Integer, nullable=True, index=True)  # 1-12 for sorting
+    # NEW FIELDS FOR CLIENTES FEATURE
+    periodo_fiscal_completo = Column(String(50), nullable=True)
+    periodo_mes_numero = Column(Integer, nullable=True, index=True)
     
     # Processing status
     processing_status = Column(Enum(ProcessingStatusEnum), default=ProcessingStatusEnum.PENDING, index=True)
     processing_error = Column(Text, nullable=True)
     
-    # Timestamps (ORIGINAL FIELD NAMES - keep these!)
+    # Timestamps
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     processed_at = Column(DateTime(timezone=True), nullable=True)
     
@@ -126,7 +126,7 @@ class Form104Data(Base):
     credito_tributario_aplicable = Column(Float, default=0.0)
     
     # Retenciones IVA (VAT Retentions) - stored as JSON
-    retenciones_iva = Column(JSON, nullable=True)  # List of {porcentaje: X, valor: Y}
+    retenciones_iva = Column(JSON, nullable=True)
     
     # Totals
     impuesto_causado = Column(Float, default=0.0)
@@ -144,19 +144,27 @@ class Form104Data(Base):
         return f"<Form104Data: Total Pagado {self.total_pagado}>"
 
 
-# NEW TABLE for Form 103 Totals (for yearly accumulator)
 class Form103Totals(Base):
-    """Form 103 Totals - Summary values for yearly accumulator"""
+    """
+    ✅ COMPLETE Form 103 Totals - ALL 10 fields
+    Summary values extracted from Form 103 tax declarations
+    """
     __tablename__ = "form_103_totals"
     
     id = Column(Integer, primary_key=True, index=True)
     document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
     
-    # Totals extracted from Form 103
-    subtotal_operaciones_pais = Column(Float, nullable=True, default=0.0)
-    total_retencion = Column(Float, nullable=True, default=0.0)
-    total_impuesto_pagar = Column(Float, nullable=True, default=0.0)
-    total_pagado = Column(Float, nullable=True, default=0.0)
+    # ✅ ALL 10 TOTALS FIELDS
+    subtotal_operaciones_pais = Column(Float, nullable=True, default=0.0)      # Code 349
+    subtotal_retencion = Column(Float, nullable=True, default=0.0)             # Code 399
+    pagos_no_sujetos = Column(Float, nullable=True, default=0.0)               # Code 332
+    otras_retenciones_base = Column(Float, nullable=True, default=0.0)         # Code 3440
+    otras_retenciones_retenido = Column(Float, nullable=True, default=0.0)     # Code 3940
+    total_retencion = Column(Float, nullable=True, default=0.0)                # Code 499
+    total_impuesto_pagar = Column(Float, nullable=True, default=0.0)           # Code 902
+    interes_mora = Column(Float, nullable=True, default=0.0)                   # Code 903
+    multa = Column(Float, nullable=True, default=0.0)                          # Code 904
+    total_pagado = Column(Float, nullable=True, default=0.0)                   # Code 999
     
     # Relationship
     document = relationship("Document", back_populates="form_103_totals")
