@@ -29,6 +29,12 @@ class Settings(BaseSettings):
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
+
+    # ✅ NEW: Authentication & Session Settings
+    SECRET_KEY: str = "your-secret-key-change-in-production-min-32-chars-long"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
+    SESSION_COOKIE_NAME: str = "tax_app_session"
     
     class Config:
         env_file = ".env"

@@ -18,6 +18,7 @@ interface UploadedFile {
 
 export default function UploadSection({ onUploadSuccess }: UploadSectionProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  
   const [isUploading, setIsUploading] = useState(false)
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {

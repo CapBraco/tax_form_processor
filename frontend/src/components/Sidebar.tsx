@@ -5,8 +5,10 @@ import {
   Upload, 
   FileText,
   FileCheck,
-  Calculator
+  Calculator,
+  LogOut
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import ClientesSection from './ClientesSection'
 import ThemeToggle from './ThemeToggle'
 
@@ -15,14 +17,17 @@ interface SidebarProps {
   setActiveSection: (section: string) => void
   selectedClient: string | null
   onClientSelect: (razonSocial: string) => void
+  clientsRefreshTrigger?: number  
 }
 
 export default function Sidebar({ 
   activeSection, 
   setActiveSection,
   selectedClient,
-  onClientSelect
+  onClientSelect,
+  clientsRefreshTrigger = 0
 }: SidebarProps) {
+  const { logout, user } = useAuth()
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'upload', label: 'Upload', icon: Upload },
@@ -67,7 +72,7 @@ export default function Sidebar({
           })}
         </ul>
 
-        {/* Clientes Section */}
+        {/* Clientes Section - ✅ UPDATED: Pass refreshTrigger */}
         <div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4">
           <div className="px-4 mb-2">
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -77,6 +82,7 @@ export default function Sidebar({
           <ClientesSection 
             onClientSelect={onClientSelect}
             selectedClient={selectedClient}
+            refreshTrigger={clientsRefreshTrigger}
           />
         </div>
 
@@ -100,13 +106,29 @@ export default function Sidebar({
 
       {/* Footer with Version and Theme Toggle */}
       <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-3">
+        {/*User login*/}
+        {user && (
+          <div className="text-xs text-gray-600 dark:text-gray-400 pb-2 border-b border-gray-200 dark:border-gray-700">
+            <p className="font-medium text-gray-900 dark:text-gray-100">{user.username}</p>
+            <p className="truncate">{user.email}</p>
+          </div>
+        )}
         <div className="text-sm text-gray-500 dark:text-gray-400">
           <p className="font-medium">Enhanced PDF Processor</p>
           <p className="text-xs mt-1">v2.0.0 - With Form Parsing</p>
         </div>
         
-        {/* ✅ ThemeToggle HERE - Inside Sidebar */}
         <ThemeToggle />
+        {/*Logout button */}
+        <button
+          onClick={logout}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 
+            bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30
+            text-red-700 dark:text-red-400 rounded-lg transition-colors text-sm font-medium"
+        >
+          <LogOut className="w-4 h-4" />
+          Cerrar Sesión
+        </button>
       </div>
     </aside>
   )

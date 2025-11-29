@@ -8,27 +8,47 @@ import type { ClientSummary } from '@/types'
 interface ClientesSectionProps {
   onClientSelect: (razonSocial: string) => void
   selectedClient: string | null
+  refreshTrigger?: number
 }
 
-export default function ClientesSection({ onClientSelect, selectedClient }: ClientesSectionProps) {
+export default function ClientesSection({ 
+  onClientSelect, 
+  selectedClient,
+  refreshTrigger = 0
+}: ClientesSectionProps) {
   const [clients, setClients] = useState<ClientSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedClient, setExpandedClient] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showRefreshIndicator, setShowRefreshIndicator] = useState(false)  // ✅ NEW: Visual feedback
 
+  // ✅ UPDATED: Now refetches when refreshTrigger changes
   useEffect(() => {
     loadClients()
-  }, [])
+  }, [refreshTrigger])
 
   const loadClients = async () => {
     try {
       setLoading(true)
       setError(null)
+      
+      // ✅ Show refresh indicator if this is a refresh (not initial load)
+      if (refreshTrigger > 0) {
+        console.log(`🔄 Refreshing clients list (trigger #${refreshTrigger})...`)
+        setShowRefreshIndicator(true)
+      }
+      
       const data = await getAllClients()
+      console.log('✅ Clients loaded:', data.length)
       setClients(data)
+      
+      // ✅ Hide refresh indicator after 2 seconds
+      if (refreshTrigger > 0) {
+        setTimeout(() => setShowRefreshIndicator(false), 2000)
+      }
     } catch (err) {
-      console.error('Error loading clients:', err)
+      console.error('❌ Error loading clients:', err)
       setError('Error al cargar clientes')
     } finally {
       setLoading(false)
@@ -54,7 +74,7 @@ export default function ClientesSection({ onClientSelect, selectedClient }: Clie
     setSearchQuery('')
   }
 
-  if (loading) {
+  if (loading && refreshTrigger === 0) {  // ✅ Only show skeleton on initial load
     return (
       <div className="p-4">
         <div className="animate-pulse space-y-3">
@@ -119,6 +139,16 @@ export default function ClientesSection({ onClientSelect, selectedClient }: Clie
           )}
         </div>
       </div>
+
+      {/* ✅ NEW: Show refresh indicator when data updates */}
+      {showRefreshIndicator && (
+        <div className="px-3 py-1.5 mx-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+          <p className="text-xs text-green-700 dark:text-green-400 flex items-center gap-2">
+            <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+            Lista actualizada
+          </p>
+        </div>
+      )}
 
       {/* Clients list */}
       <div className="space-y-1 max-h-96 overflow-y-auto">

@@ -17,7 +17,7 @@ from app.models import base
 
 # Import API routers
 from app.api.clientes import router as clientes_router
-from app.api import upload, documents, forms_data
+from app.api import upload, documents, forms_data, auth
 
 # Configure logging
 logging.basicConfig(
@@ -119,6 +119,8 @@ async def health_check():
 
 
 # Include API routers
+app.include_router(auth.router, prefix="/api")
+app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
 app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
 app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
 app.include_router(forms_data.router, prefix="/api/forms-data", tags=["Forms Data"])

@@ -11,6 +11,9 @@ from sqlalchemy import select, func
 from typing import List, Dict, Optional
 from pydantic import BaseModel
 
+import requests
+from PIL import Image as PILImage
+
 from app.core.database import get_db
 from app.models.base import Document, Form103Totals, Form104Data, FormTypeEnum
 
@@ -19,11 +22,13 @@ from io import BytesIO
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, Image, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
 
+from app.core.security import get_current_user
+from app.models.base import User
 
 router = APIRouter(prefix="/clientes", tags=["clientes"])
 
@@ -78,7 +83,10 @@ def is_valid_year(year: str) -> bool:
 # List all clients
 # ------------------------------
 @router.get("/", response_model=List[ClientSummary])
-async def get_all_clients(db: AsyncSession = Depends(get_db)):
+async def get_all_clients(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
     query = select(
         Document.razon_social,
         func.count(Document.id).label('document_count'),
@@ -103,12 +111,11 @@ async def get_all_clients(db: AsyncSession = Depends(get_db)):
 # Documents grouped by year/month
 # ------------------------------
 @router.get("/{razon_social}")
-async def get_client_documents(razon_social: str, db: AsyncSession = Depends(get_db)):
-    """
-    ✅ FIXED: Returns documents organized by year/month
-    - Documents without periodo_anio are skipped (not grouped by year)
-    - But client is still found if they have ANY documents
-    """
+async def get_client_documents(
+    razon_social: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
     query = select(Document).where(Document.razon_social == razon_social).order_by(Document.periodo_anio.desc(), Document.id.asc())
     result = await db.execute(query)
     documents = result.scalars().all()
@@ -171,12 +178,14 @@ async def get_client_documents(razon_social: str, db: AsyncSession = Depends(get
 # Yearly summary
 # ------------------------------
 @router.get("/{razon_social}/yearly-summary/{year}")
-async def get_yearly_summary(razon_social: str, year: str, exclude_months: Optional[str] = None, db: AsyncSession = Depends(get_db)):
-    """
-    ✅ FIXED: Added year validation
-    ✅ FIXED: Only accesses fields that exist in the model
-    """
-    # ✅ NEW: Validate year parameter
+async def get_yearly_summary(
+    razon_social: str, 
+    year: str, 
+    exclude_months: Optional[str] = None, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+    ):
+
     if not is_valid_year(year):
         raise HTTPException(
             status_code=400,
@@ -612,7 +621,38 @@ async def export_yearly_pdf(
         textColor=colors.HexColor(branding.primary_color or '#1a73e8'),
         spaceAfter=12,
     )
-    
+        # ✅ CORRECTED: Use BytesIO for both
+    if branding.logo_url:
+        try:
+            response = requests.get(branding.logo_url, timeout=10)
+            response.raise_for_status()
+            
+            # Use BytesIO (not PILBytesIO)
+            logo_bytes = BytesIO(response.content)
+            pil_img = PILImage.open(logo_bytes)
+            
+            # Calculate aspect ratio and resize
+            max_width = 2 * inch
+            max_height = 1 * inch
+            width, height = pil_img.size
+            aspect_ratio = width / height
+            
+            if width > max_width:
+                width = max_width
+                height = width / aspect_ratio
+            if height > max_height:
+                height = max_height
+                width = height * aspect_ratio
+            
+            # Create ReportLab Image
+            logo_bytes.seek(0)
+            logo_img = Image(logo_bytes, width=width, height=height)
+            elements.append(logo_img)
+            elements.append(Spacer(1, 0.2*inch))
+            
+        except Exception as e:
+            print(f"⚠️ Could not load logo from {branding.logo_url}: {e}")
+        
     # Title
     elements.append(Paragraph(f"Resumen Anual {year}", title_style))
     elements.append(Paragraph(branding.company_name, styles['Normal']))

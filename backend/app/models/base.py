@@ -3,7 +3,7 @@ Enhanced Database Models - COMPATIBLE with original project
 ✅ UPDATED Form103Totals with ALL 10 fields
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey, JSON, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey, JSON, Enum, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.core.database import Base
@@ -171,3 +171,19 @@ class Form103Totals(Base):
     
     def __repr__(self):
         return f"<Form103Totals: Doc {self.document_id} - Total {self.total_pagado}>"
+    # User model for authentication
+class User(Base):
+    """User model for authentication"""
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_login = Column(DateTime(timezone=True), nullable=True)
+    
+    def __repr__(self):
+        return f"<User {self.username}>"

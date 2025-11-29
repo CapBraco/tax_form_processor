@@ -4,6 +4,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -95,6 +96,22 @@ import type {
   YearValidation,
   PDFBranding
 } from '@/types'
+
+// ===== AUTHENTICATION =====
+export async function checkAuth() {
+  const response = await api.get('/api/auth/check')
+  return response.data
+}
+
+export async function login(username: string, password: string) {
+  const response = await api.post('/api/auth/login', { username, password })
+  return response.data
+}
+
+export async function logout() {
+  const response = await api.post('/api/auth/logout')
+  return response.data
+}
 
 // Get all clients
 export const getAllClients = async (): Promise<ClientSummary[]> => {

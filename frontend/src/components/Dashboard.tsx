@@ -14,9 +14,10 @@ interface DashboardProps {
   onNavigate: Dispatch<SetStateAction<string>>
   selectedClient: string | null
   onClientSelect: (razonSocial: string) => void
+  onDocumentsUploaded?: () => void
 }
 
-export default function Dashboard({ activeSection, onNavigate, selectedClient, onClientSelect }: DashboardProps) {
+export default function Dashboard({ activeSection, onNavigate, selectedClient, onClientSelect, onDocumentsUploaded }: DashboardProps) {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -38,7 +39,8 @@ export default function Dashboard({ activeSection, onNavigate, selectedClient, o
 
   const handleUploadSuccess = () => {
     setRefreshTrigger(prev => prev + 1)
-    loadStats() // Refresh stats after upload
+    loadStats()
+    onDocumentsUploaded?.() 
     onNavigate('documents')
   }
 
@@ -77,7 +79,7 @@ export default function Dashboard({ activeSection, onNavigate, selectedClient, o
     // OTHER SECTIONS
     switch (activeSection) {
       case 'upload':
-        return <UploadSection onUploadSuccess={handleUploadSuccess} />
+        return <UploadSection onUploadSuccess={onDocumentsUploaded} />
       
       case 'documents':
         return <DocumentsSection refreshTrigger={refreshTrigger} />
