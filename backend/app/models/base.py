@@ -185,5 +185,10 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)
     
+
+     # Password reset fields
+    reset_token = Column(String(500), nullable=True)
+    reset_token_expires = Column(DateTime(timezone=True), nullable=True)
+    
     def __repr__(self):
         return f"<User {self.username}>"

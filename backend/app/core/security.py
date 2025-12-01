@@ -4,19 +4,17 @@ Security utilities for authentication and password hashing
 
 from datetime import datetime, timedelta
 from typing import Optional
-from passlib.context import CryptContext
+import bcrypt
 from jose import JWTError, jwt
 from fastapi import HTTPException, status, Depends, Cookie
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+import secrets
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.base import User
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # HTTP Bearer for optional token auth
 security = HTTPBearer(auto_error=False)
@@ -24,12 +22,17 @@ security = HTTPBearer(auto_error=False)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(
+        plain_password.encode('utf-8'), 
+        hashed_password.encode('utf-8')
+    )
 
 
 def get_password_hash(password: str) -> str:
-    """Hash a password"""
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt"""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -45,9 +48,38 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
+def create_password_reset_token(email: str) -> str:
+    """Create a password reset token (valid for 1 hour)"""
+    expires = timedelta(hours=1)
+    return create_access_token(
+        data={"sub": email, "type": "password_reset"},
+        expires_delta=expires
+    )
+
+
+def verify_password_reset_token(token: str) -> Optional[str]:
+    """Verify password reset token and return email"""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        
+        if email is None or token_type != "password_reset":
+            return None
+        return email
+    except JWTError:
+        return None
+
+
 async def get_user_by_username(db: AsyncSession, username: str) -> Optional[User]:
     """Get user by username"""
     result = await db.execute(select(User).where(User.username == username))
+    return result.scalar_one_or_none()
+
+
+async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
+    """Get user by email"""
+    result = await db.execute(select(User).where(User.email == email))
     return result.scalar_one_or_none()
 
 

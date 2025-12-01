@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { Lock, User, AlertCircle } from 'lucide-react'
 
@@ -111,6 +112,19 @@ export default function LoginPage() {
           </form>
 
           {/* Footer */}
+          <div className="mt-6 space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                ¿No tienes una cuenta?{' '}
+                <Link href="/register" className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                Regístrate
+                </Link>
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                <Link href="/forgot-password" className="text-blue-600 dark:text-blue-400 hover:underline">
+                ¿Olvidaste tu contraseña?
+                </Link>
+            </p>
+            </div>
           <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
             <p>Tax Forms Processor v2.0</p>
           </div>

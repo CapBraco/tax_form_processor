@@ -214,5 +214,38 @@ export const exportYearlyPDF = async (
   window.URL.revokeObjectURL(url)
 }
 
+// ===== PASSWORD MANAGEMENT =====
+export async function register(username: string, email: string, password: string, confirmPassword: string) {
+  const response = await api.post('/api/auth/register', {
+    username,
+    email,
+    password,
+    confirm_password: confirmPassword
+  })
+  return response.data
+}
+
+export async function requestPasswordReset(email: string) {
+  const response = await api.post('/api/auth/password-reset-request', { email })
+  return response.data
+}
+
+export async function resetPassword(token: string, newPassword: string, confirmPassword: string) {
+  const response = await api.post('/api/auth/password-reset', {
+    token,
+    new_password: newPassword,
+    confirm_password: confirmPassword
+  })
+  return response.data
+}
+
+export async function changePassword(currentPassword: string, newPassword: string, confirmPassword: string) {
+  const response = await api.post('/api/auth/change-password', {
+    current_password: currentPassword,
+    new_password: newPassword,
+    confirm_password: confirmPassword
+  })
+  return response.data
+}
 
 export default api
