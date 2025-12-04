@@ -230,7 +230,7 @@ Before you begin, ensure you have the following installed:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/tax-forms-processor.git
+   git clone https://github.com/CapBraco/tax-forms-processor.git
    cd tax-forms-processor
    ```
 
@@ -813,7 +813,7 @@ Contributions are welcome! Please follow these guidelines:
 
 1. **Fork the repository**
    ```bash
-   git clone https://github.com/yourusername/tax-forms-processor.git
+   git clone https://github.com/CapBraco/tax-forms-processor.git
    ```
 
 2. **Create a feature branch**
@@ -886,7 +886,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ```
 MIT License
 
-Copyright (c) 2024 [Your Name]
+Copyright (c) 2024 [Bryan A. Paucar]
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -902,16 +902,16 @@ furnished to do so, subject to the following conditions:
 
 ## 📞 Contact
 
-**Project Maintainer**: [Your Name]
+**Project Maintainer**: [Bryan A. Paucar]
 
-- Email: your.email@example.com
-- LinkedIn: [Your LinkedIn Profile](https://linkedin.com/in/yourprofile)
-- Portfolio: [your-portfolio.com](https://your-portfolio.com)
-- GitHub: [@yourusername](https://github.com/yourusername)
+- Email: dev@capbraco.com
+- LinkedIn: [Your LinkedIn Profile](https://www.linkedin.com/in/bryanpaucar)
+- Portfolio: [your-portfolio.com](https://capbraco.com)
+- GitHub: [@yourusername](https://github.com/CapBraco)
 
 **Project Links**:
-- Repository: [https://github.com/yourusername/tax-forms-processor](https://github.com/yourusername/tax-forms-processor)
-- Issue Tracker: [https://github.com/yourusername/tax-forms-processor/issues](https://github.com/yourusername/tax-forms-processor/issues)
+- Repository: [https://github.com/CapBraco/tax-forms-processor](https://github.com/yourusername/tax-forms-processor)
+- Issue Tracker: [https://github.com/CapBraco/tax-forms-processor/issues](https://github.com/yourusername/tax-forms-processor/issues)
 - Live Demo: [https://tax-forms-processor.railway.app](https://tax-forms-processor.railway.app)
 
 ---
@@ -924,6 +924,7 @@ furnished to do so, subject to the following conditions:
 - [Railway](https://railway.app) for simplified deployment
 - Servicio de Rentas Internas (SRI) Ecuador for tax form specifications
 - The open-source community for inspiration and support
+- My dad, to inspire me to build this app
 
 ---
 
