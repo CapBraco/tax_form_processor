@@ -396,5 +396,5 @@ class Form104Parser:
             return 0.0
 
 
-# Singleton instance
+# ✅ CRITICAL: Singleton instance export
 form_104_parser = Form104Parser()

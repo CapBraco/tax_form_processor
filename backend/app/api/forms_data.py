@@ -1,35 +1,55 @@
 """
 Updated Forms Data API Endpoints
 ✅ NOW INCLUDES: Codes 332, 3440, 3940 in Form 103 responses
+✅ FIXED: Works for both guests and registered users
 """
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
 from typing import Optional
 
 from app.core.database import get_db
-from app.models.base import Document, Form103LineItem, Form104Data, Form103Totals, FormTypeEnum
+from app.core.security import get_current_user_optional  # ✅ CHANGED: Optional auth
+from app.models.base import Document, Form103LineItem, Form104Data, Form103Totals, FormTypeEnum, User
 
 router = APIRouter(tags=["forms-data"])
 
 
 @router.get("/form-103/{document_id}")
-async def get_form_103_data(document_id: int, db: AsyncSession = Depends(get_db)):
+async def get_form_103_data(
+    document_id: int, 
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)  # ✅ ADDED: Optional auth
+):
     """
     Get Form 103 data with complete line items and ALL totals
     ✅ NOW INCLUDES: Code 332, 3440, 3940
+    ✅ Works for both guests and registered users
     """
     # Fetch document
-    doc_query = select(Document).where(Document.id == document_id, Document.form_type == FormTypeEnum.FORM_103)
+    doc_query = select(Document).where(
+        Document.id == document_id, 
+        Document.form_type == FormTypeEnum.FORM_103
+    )
     doc_result = await db.execute(doc_query)
     document = doc_result.scalar_one_or_none()
     
     if not document:
         raise HTTPException(status_code=404, detail="Form 103 document not found")
     
+    # ✅ Verify ownership if document belongs to a user
+    if document.user_id:
+        if not current_user or document.user_id != current_user.id:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found or you don't have permission to access it"
+            )
+    
     # Fetch line items
-    items_query = select(Form103LineItem).where(Form103LineItem.document_id == document_id).order_by(Form103LineItem.order_index)
+    items_query = select(Form103LineItem).where(
+        Form103LineItem.document_id == document_id
+    ).order_by(Form103LineItem.order_index)
     items_result = await db.execute(items_query)
     line_items = items_result.scalars().all()
     
@@ -57,39 +77,58 @@ async def get_form_103_data(document_id: int, db: AsyncSession = Depends(get_db)
             }
             for item in line_items
         ],
-        # ✅ UPDATED: Now includes ALL 7 fields
+        # ✅ UPDATED: Now includes ALL 10 fields
         "totals": {
-            "subtotal_operaciones": totals.subtotal_operaciones_pais if totals else 0.0,
+            "subtotal_operaciones_pais": totals.subtotal_operaciones_pais if totals else 0.0,
             "subtotal_retencion": totals.subtotal_retencion if totals else 0.0,  # ✅ Code 332
             "total_retencion": totals.total_retencion if totals else 0.0,
             "total_impuesto_pagar": totals.total_impuesto_pagar if totals else 0.0,
             "interes_mora": totals.interes_mora if totals else 0.0,  # ✅ Code 3440
             "multa": totals.multa if totals else 0.0,  # ✅ Code 3940
-            "total_pagado": totals.total_pagado if totals else 0.0
+            "total_pagado": totals.total_pagado if totals else 0.0,
+            "pagos_no_sujetos": totals.pagos_no_sujetos if totals else 0.0,
+            "otras_retenciones_base": totals.otras_retenciones_base if totals else 0.0,
+            "otras_retenciones_retenido": totals.otras_retenciones_retenido if totals else 0.0
         } if totals else None
     }
 
 
 @router.get("/form-104/{document_id}")
-async def get_form_104_data(document_id: int, db: AsyncSession = Depends(get_db)):
+async def get_form_104_data(
+    document_id: int, 
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)  # ✅ ADDED: Optional auth
+):
     """
     Get Form 104 data with COMPLETE parsed data
     ✅ Returns ALL fields extracted by the parser (75+ fields)
+    ✅ Works for both guests and registered users
     """
     # Fetch document
-    doc_query = select(Document).where(Document.id == document_id, Document.form_type == FormTypeEnum.FORM_104)
+    doc_query = select(Document).where(
+        Document.id == document_id, 
+        Document.form_type == FormTypeEnum.FORM_104
+    )
     doc_result = await db.execute(doc_query)
     document = doc_result.scalar_one_or_none()
     
     if not document:
         raise HTTPException(status_code=404, detail="Form 104 document not found")
     
+    # ✅ Verify ownership if document belongs to a user
+    if document.user_id:
+        if not current_user or document.user_id != current_user.id:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found or you don't have permission to access it"
+            )
+    
     # Fetch structured data from database
     data_query = select(Form104Data).where(Form104Data.document_id == document_id)
     data_result = await db.execute(data_query)
     form_data = data_result.scalar_one_or_none()
     
-    # ✅ NEW: Get COMPLETE parsed data from JSON field
+    # ✅ Get COMPLETE parsed data from JSON field
     parsed_data = document.parsed_data or {}
     
     # Build base response from database fields
@@ -133,22 +172,14 @@ async def get_form_104_data(document_id: int, db: AsyncSession = Depends(get_db)
             "total_pagado": form_data.total_pagado
         }
         
-        # ✅ NEW: MERGE with complete parsed data from JSON
-        # This adds ALL the fields that the parser extracted but aren't in the DB model
+        # ✅ MERGE with complete parsed data from JSON
         if parsed_data:
-            # Merge ventas fields
             if "ventas" in parsed_data:
                 response["ventas"].update(parsed_data["ventas"])
-            
-            # Merge compras fields
             if "compras" in parsed_data:
                 response["compras"].update(parsed_data["compras"])
-            
-            # Merge totals fields
             if "totals" in parsed_data:
                 response["totals"].update(parsed_data["totals"])
-            
-            # Retenciones should already be complete from DB
             if "retenciones_iva" in parsed_data and not response["retenciones_iva"]:
                 response["retenciones_iva"] = parsed_data["retenciones_iva"]
     else:
@@ -166,13 +197,29 @@ async def list_documents_by_form_type(
     form_type: str,
     skip: int = 0,
     limit: int = 100,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional)  # ✅ ADDED: Optional auth
 ):
-    """List all documents of a specific form type"""
+    """
+    List all documents of a specific form type
+    ✅ FIXED: If logged in, show user's documents. If guest, show empty list.
+    """
+    
+    # ✅ Guests don't have saved documents
+    if not current_user:
+        return []
+    
     # Map string to enum
     form_type_enum = FormTypeEnum.FORM_103 if form_type == "form_103" else FormTypeEnum.FORM_104
     
-    query = select(Document).where(Document.form_type == form_type_enum).order_by(Document.uploaded_at.desc()).offset(skip).limit(limit)
+    # ✅ Query only user's documents
+    query = select(Document).where(
+        and_(
+            Document.form_type == form_type_enum,
+            Document.user_id == current_user.id
+        )
+    ).order_by(Document.uploaded_at.desc()).offset(skip).limit(limit)
+    
     result = await db.execute(query)
     documents = result.scalars().all()
     

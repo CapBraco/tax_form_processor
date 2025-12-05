@@ -191,5 +191,5 @@ class Form103Parser:
         return totals
 
 
-# Singleton instance
+# ✅ CRITICAL: Singleton instance export
 form_103_parser = Form103Parser()

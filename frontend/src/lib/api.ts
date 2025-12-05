@@ -21,7 +21,9 @@ export const uploadSinglePDF = async (file: File) => {
   const formData = new FormData()
   formData.append('file', file)
   
+  // ✅ Use axios instance with explicit config merge
   const response = await api.post('/api/upload/single', formData, {
+    withCredentials: true,  // ✅ Explicit
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -35,12 +37,36 @@ export const uploadMultiplePDFs = async (files: File[]) => {
     formData.append('files', file)
   })
   
+  // ✅ Use axios instance with explicit config merge
   const response = await api.post('/api/upload/bulk', formData, {
+    withCredentials: true,  // ✅ Explicit
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   })
   return response.data
+}
+
+// Alternative approach if above doesn't work:
+// Create FormData requests directly with fetch API
+
+export const uploadMultiplePDFsWithFetch = async (files: File[]) => {
+  const formData = new FormData()
+  files.forEach(file => {
+    formData.append('files', file)
+  })
+  
+  const response = await fetch('http://localhost:8000/api/upload/bulk', {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',  // ✅ This is equivalent to withCredentials
+  })
+  
+  if (!response.ok) {
+    throw new Error(`Upload failed: ${response.status}`)
+  }
+  
+  return response.json()
 }
 
 export const getUploadStatus = async (documentId: number) => {

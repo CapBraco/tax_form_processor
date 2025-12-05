@@ -1,6 +1,6 @@
 """
 Enhanced PDF Form Processor - Main Application
-FastAPI backend with Form 103/104 parsing
+✅ FINAL VERSION: All routers registered correctly
 """
 
 from fastapi import FastAPI, Request
@@ -10,14 +10,24 @@ import time
 from contextlib import asynccontextmanager
 import logging
 import os
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
 from app.core.database import engine
 from app.models import base
 
-# Import API routers
-from app.api.clientes import router as clientes_router
-from app.api import upload, documents, forms_data, auth
+# ✅ Import ALL routers including admin
+from app.api import (
+    auth, 
+    upload, 
+    documents, 
+    clientes, 
+    dashboard, 
+    form_103, 
+    form_104,
+    forms_data,
+    admin  # ✅ MUST IMPORT THIS
+)
 
 # Configure logging
 logging.basicConfig(
@@ -29,46 +39,55 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Lifespan events for the application.
-    Runs on startup and shutdown.
-    """
+    """Lifespan events"""
     # Startup
     logger.info("🚀 Starting Enhanced PDF Form Processor API...")
     logger.info(f"📊 Database: {settings.DATABASE_URL.split('@')[-1]}")
     logger.info(f"📁 Upload directory: {settings.UPLOAD_DIR}")
     
-    # Create upload directory if it doesn't exist
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     
     yield
     
     # Shutdown
-    logger.info("👋 Shutting down Enhanced PDF Form Processor API...")
+    logger.info("👋 Shutting down...")
     await engine.dispose()
 
 
-# Create FastAPI application
+# Create app
 app = FastAPI(
     title="Enhanced PDF Form Processor",
-    description="Extracts structured data from Ecuadorian Form 103 and 104",
+    description="Form 103 & 104 Processing with User Data Isolation",
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan
 )
 
-# CORS Configuration
+# ===================================
+# Middleware - MUST BE FIRST
+# ===================================
+app.add_middleware(SessionMiddleware, secret_key="wJ9vF6qL2Zs8XhK4bQp1nRm3GtYxVcDa")
+
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
+logger.info(f"🌐 CORS configured for origins: {allowed_origins}")
 
-# Middleware for request timing
+
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = time.time()
@@ -78,31 +97,23 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
-# Root endpoint
+# ===================================
+# Root & Health
+# ===================================
 @app.get("/")
 async def root():
-    """Root endpoint - API health check"""
     return {
         "message": "Enhanced PDF Form Processor API",
         "version": "2.0.0",
-        "features": [
-            "Form 103 (Retenciones) parsing",
-            "Form 104 (IVA) parsing",
-            "Structured data extraction",
-            "Database storage"
-        ],
         "status": "online",
         "docs": "/docs"
     }
 
 
-# Health check endpoint
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for monitoring"""
     from sqlalchemy import text
     
-    # Check database
     db_status = "connected"
     try:
         from app.core.database import AsyncSessionLocal
@@ -118,18 +129,43 @@ async def health_check():
     }
 
 
-# Include API routers
-app.include_router(auth.router, prefix="/api")
-app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
-app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
-app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
-app.include_router(forms_data.router, prefix="/api/forms-data", tags=["Forms Data"])
-app.include_router(clientes_router, prefix="/api", tags=["Clientes"])
+# ===================================
+# ✅ Register ALL Routers
+# ===================================
 
-# Global exception handler
+# Authentication
+app.include_router(auth.router, prefix="/api", tags=["Authentication"])
+
+# Upload
+app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
+
+# Documents
+app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
+
+# Clientes
+app.include_router(clientes.router, prefix="/api", tags=["Clientes"])
+
+# Dashboard
+app.include_router(dashboard.router, prefix="/api", tags=["Dashboard"])
+
+# Form 103
+app.include_router(form_103.router, prefix="/api", tags=["Form 103"])
+
+# Form 104
+app.include_router(form_104.router, prefix="/api", tags=["Form 104"])
+
+# Forms Data
+app.include_router(forms_data.router, prefix="/api/forms-data", tags=["Forms Data"])
+
+# ✅ Admin (YOUR EXISTING admin.py)
+app.include_router(admin.router, prefix="/api", tags=["Admin"])
+
+
+# ===================================
+# Exception Handler
+# ===================================
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Global exception handler for unhandled errors"""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,

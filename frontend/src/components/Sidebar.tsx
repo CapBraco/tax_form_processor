@@ -8,10 +8,11 @@ import {
   Calculator,
   LogOut,
   Settings,
-  KeyRound  // ✅ ADD THIS
+  KeyRound,
+  Shield  // ✅ Make sure this is imported
 } from 'lucide-react'
-import { useState } from 'react'  // ✅ ADD THIS
-import Link from 'next/link'  // ✅ ADD THIS
+import { useState } from 'react'
+import Link from 'next/link'
 import ClientesSection from './ClientesSection'
 import ThemeToggle from './ThemeToggle'
 import { useAuth } from '@/contexts/AuthContext'
@@ -32,7 +33,7 @@ export default function Sidebar({
   clientsRefreshTrigger = 0
 }: SidebarProps) {
   const { logout, user } = useAuth()
-  const [showUserMenu, setShowUserMenu] = useState(false)  // ✅ ADD THIS
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -41,6 +42,10 @@ export default function Sidebar({
     { id: 'form103', label: 'Form 103', icon: FileCheck, color: 'text-blue-600' },
     { id: 'form104', label: 'Form 104', icon: Calculator, color: 'text-purple-600' },
   ]
+
+  // ✅ Add console log to debug
+  console.log('👤 Current user:', user)
+  console.log('🔐 Is superuser?', user?.is_superuser)
 
   return (
     <aside className="w-64 bg-white dark:bg-gray-800 shadow-lg flex flex-col">
@@ -76,6 +81,21 @@ export default function Sidebar({
               </li>
             )
           })}
+
+          {/* ✅ Admin Panel Link - Show ONLY for superusers */}
+          {user?.is_superuser && (
+            <li>
+              <Link
+                href="/admin"
+                className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg
+                  text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700
+                  transition-colors duration-200"
+              >
+                <Shield size={20} className="text-purple-600" />
+                <span className="font-medium">Admin Panel</span>
+              </Link>
+            </li>
+          )}
         </ul>
 
         {/* Clientes Section */}
@@ -92,7 +112,7 @@ export default function Sidebar({
           />
         </div>
 
-        {/* Forms Legend (colors only) */}
+        {/* Forms Legend */}
         <div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4">
           <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Form Types:</p>
@@ -110,9 +130,9 @@ export default function Sidebar({
         </div>
       </nav>
 
-      {/* Footer with User Info, Theme Toggle, and Logout */}
+      {/* Footer with User Info */}
       <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-3">
-        {/* ✅ NEW: User Profile with Dropdown */}
+        {/* User Profile with Dropdown */}
         {user && (
           <div className="relative">
             <button
@@ -130,6 +150,12 @@ export default function Sidebar({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {user.username}
+                  {/* ✅ Show badge if superuser */}
+                  {user.is_superuser && (
+                    <span className="ml-2 text-xs bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded">
+                      Admin
+                    </span>
+                  )}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                   {user.email}
@@ -138,16 +164,14 @@ export default function Sidebar({
               <Settings className="w-4 h-4 text-gray-400 flex-shrink-0" />
             </button>
 
-            {/* ✅ Dropdown Menu */}
+            {/* Dropdown Menu */}
             {showUserMenu && (
               <>
-                {/* Backdrop to close menu */}
                 <div 
                   className="fixed inset-0 z-10" 
                   onClick={() => setShowUserMenu(false)}
                 />
                 
-                {/* Menu */}
                 <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 
                   rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden z-20">
                   <Link

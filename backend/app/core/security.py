@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import bcrypt
 from jose import JWTError, jwt
-from fastapi import HTTPException, status, Depends, Cookie
+from fastapi import HTTPException, status, Depends, Cookie, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -144,11 +144,27 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
 # Optional: For endpoints that don't require auth but can use it
 async def get_current_user_optional(
     db: AsyncSession = Depends(get_db),
-    token: Optional[str] = Cookie(None, alias=settings.SESSION_COOKIE_NAME),
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    token: Optional[str] = Cookie(None, alias=settings.SESSION_COOKIE_NAME)
 ) -> Optional[User]:
-    """Get current user if authenticated, None otherwise"""
+    """
+    Get current user from session cookie (if exists)
+    Returns None if not authenticated (guest user)
+    Does NOT raise exception if no user found
+    """
+    if not token:
+        return None  # Guest user
+    
     try:
-        return await get_current_user(db, token, credentials)
-    except HTTPException:
-        return None
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            return None
+    except JWTError:
+        return None  # Invalid token, treat as guest
+    
+    user = await get_user_by_username(db, username)
+    
+    if user and not user.is_active:
+        return None  # Inactive user, treat as guest
+    
+    return user  # Returns None if user not found

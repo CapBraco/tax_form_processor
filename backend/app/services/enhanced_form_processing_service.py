@@ -1,5 +1,6 @@
 """
-Enhanced Form Processing Service - FIXED VERSION
+Enhanced Form Processing Service - CORRECTED VERSION
+✅ Added user_id parameter to process_uploaded_document
 ✅ Fixes period extraction for "Período Fiscal: ABRIL 2025" format
 ✅ Fixes Form 104 classification for "2011 DECLARACION DE IVA"
 ✅ Includes all 10 Form 103 totals fields
@@ -28,7 +29,8 @@ class EnhancedFormProcessingService:
         file_path: str,
         original_filename: str,
         file_size: int,
-        db: AsyncSession
+        db: AsyncSession,
+        user_id: Optional[int] = None  # ✅ ADDED THIS PARAMETER
     ) -> Document:
         """Process a newly uploaded document: extract text, classify form type, parse data"""
         try:
@@ -48,7 +50,8 @@ class EnhancedFormProcessingService:
                 extracted_text=text,
                 total_pages=total_pages,
                 total_characters=total_chars,
-                processing_status=ProcessingStatusEnum.PROCESSING
+                processing_status=ProcessingStatusEnum.PROCESSING,
+                user_id=user_id  # ✅ ADDED THIS FIELD
             )
             
             db.add(document)

@@ -4,7 +4,7 @@ Handles login, logout, registration, and password management
 """
 
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
@@ -23,11 +23,13 @@ from app.core.security import (
     verify_password
 )
 from app.models.base import User
+from app.core.guest_session import GuestSessionManager
+from app.utils.session_utils import get_session_id_from_request
+
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
-# ===== MODELS =====
 class UserLogin(BaseModel):
     username: str
     password: str
@@ -44,7 +46,7 @@ class UserCreate(BaseModel):
     def username_valid(cls, v):
         if len(v) < 3:
             raise ValueError('Username must be at least 3 characters')
-        if not v.isalnum() and '_' not in v:
+        if not v.replace('_', '').isalnum():
             raise ValueError('Username must contain only letters, numbers, and underscores')
         return v
     
@@ -112,7 +114,11 @@ class UserResponse(BaseModel):
     username: str
     email: str
     is_active: bool
+    is_superuser: bool
     created_at: str
+    
+    class Config:
+        from_attributes = True
 
 
 class LoginResponse(BaseModel):
@@ -121,9 +127,9 @@ class LoginResponse(BaseModel):
     message: str
 
 
-# ===== LOGIN =====
 @router.post("/login", response_model=LoginResponse)
 async def login(
+    request: Request,
     response: Response,
     user_data: UserLogin,
     db: AsyncSession = Depends(get_db)
@@ -138,25 +144,32 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     
-    # Set cookie
     response.set_cookie(
         key=settings.SESSION_COOKIE_NAME,
         value=access_token,
         httponly=True,
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=False  # Set to True in production with HTTPS
+        secure=False
     )
     
-    # Update last login
     user.last_login = datetime.utcnow()
     await db.commit()
+    
+    guest_manager = GuestSessionManager(db)
+    session_id = get_session_id_from_request(request)
+    
+    await guest_manager.log_event(
+        event_type="login",
+        user_id=user.id,
+        session_id=session_id,
+        metadata={"username": user.username}
+    )
     
     return LoginResponse(
         success=True,
@@ -165,13 +178,13 @@ async def login(
             username=user.username,
             email=user.email,
             is_active=user.is_active,
+            is_superuser=user.is_superuser,
             created_at=user.created_at.isoformat()
         ),
         message="Login successful"
     )
 
 
-# ===== LOGOUT =====
 @router.post("/logout")
 async def logout(
     response: Response,
@@ -182,107 +195,127 @@ async def logout(
     return {"success": True, "message": "Logged out successfully"}
 
 
-# ===== REGISTER =====
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register(
+    request: Request,
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Register a new user
-    NOTE: In production, you may want to:
-    - Require email verification
-    - Add CAPTCHA
-    - Limit registration to invited users
-    - Require admin approval
-    """
-    # Check if username exists
-    existing_user = await get_user_by_username(db, user_data.username)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already registered"
+    """Register a new user with analytics tracking"""
+    try:
+        existing_user = await get_user_by_username(db, user_data.username)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already registered"
+            )
+        
+        existing_email = await get_user_by_email(db, user_data.email)
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        hashed_password = get_password_hash(user_data.password)
+        new_user = User(
+            username=user_data.username,
+            email=user_data.email,
+            hashed_password=hashed_password,
+            is_active=True,
+            is_superuser=False,
+            created_at=datetime.utcnow()
         )
-    
-    # Check if email exists
-    existing_email = await get_user_by_email(db, user_data.email)
-    if existing_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+        
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+        
+        guest_manager = GuestSessionManager(db)
+        session_id = get_session_id_from_request(request)
+        
+        if session_id:
+            session_info = await guest_manager.get_session_info(session_id)
+            converted_from_guest = session_info is not None
+            
+            await guest_manager.log_event(
+                event_type="registration",
+                session_id=session_id,
+                user_id=new_user.id,
+                metadata={
+                    "converted_from_guest": converted_from_guest,
+                    "guest_documents_uploaded": session_info.get("document_count", 0) if session_info else 0
+                }
+            )
+        else:
+            await guest_manager.log_event(
+                event_type="registration",
+                user_id=new_user.id,
+                metadata={"converted_from_guest": False}
+            )
+        
+        return UserResponse(
+            id=new_user.id,
+            username=new_user.username,
+            email=new_user.email,
+            is_active=new_user.is_active,
+            is_superuser=new_user.is_superuser,
+            created_at=new_user.created_at.isoformat()
         )
-    
-    # Create new user
-    hashed_password = get_password_hash(user_data.password)
-    new_user = User(
-        username=user_data.username,
-        email=user_data.email,
-        hashed_password=hashed_password,
-        is_active=True,
-        is_superuser=False
-    )
-    
-    db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
-    
-    return UserResponse(
-        id=new_user.id,
-        username=new_user.username,
-        email=new_user.email,
-        is_active=new_user.is_active,
-        created_at=new_user.created_at.isoformat()
-    )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        print(f"❌ Registration error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating user: {str(e)}"
+        )
 
 
-# ===== PASSWORD RESET REQUEST =====
 @router.post("/password-reset-request")
 async def request_password_reset(
     request_data: PasswordResetRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    Request a password reset
-    NOTE: In production, send reset link via email instead of returning token
-    """
+    """Request a password reset"""
     user = await get_user_by_email(db, request_data.email)
     
-    # Always return success to prevent user enumeration
     if not user:
         return {
             "success": True,
             "message": "If the email exists, a password reset link has been sent"
         }
     
-    # Generate reset token
     reset_token = create_password_reset_token(user.email)
     
-    # Store token in database
     user.reset_token = reset_token
     user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
     await db.commit()
     
-    # ⚠️ IN PRODUCTION: Send email with reset link instead of returning token
-    # For now, we'll return the token for development
-    reset_link = f"http://localhost:3000/reset-password?token={reset_token}"
+    if settings.PRODUCTION:
+        return {
+            "success": True,
+            "message": "If the email exists, a password reset link has been sent"
+        }
+    
+    reset_link = f"{settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else 'http://localhost:3000'}/reset-password?token={reset_token}"
     
     return {
         "success": True,
         "message": "If the email exists, a password reset link has been sent",
-        # ⚠️ REMOVE IN PRODUCTION - only for development
         "dev_reset_link": reset_link,
         "dev_token": reset_token
     }
 
 
-# ===== PASSWORD RESET =====
 @router.post("/password-reset")
 async def reset_password(
     reset_data: PasswordReset,
     db: AsyncSession = Depends(get_db)
 ):
     """Reset password using token"""
-    # Verify token
     email = verify_password_reset_token(reset_data.token)
     if not email:
         raise HTTPException(
@@ -290,7 +323,6 @@ async def reset_password(
             detail="Invalid or expired reset token"
         )
     
-    # Get user
     user = await get_user_by_email(db, email)
     if not user:
         raise HTTPException(
@@ -298,7 +330,6 @@ async def reset_password(
             detail="User not found"
         )
     
-    # Check if token matches and hasn't expired
     if user.reset_token != reset_data.token:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -311,7 +342,6 @@ async def reset_password(
             detail="Reset token has expired"
         )
     
-    # Update password
     user.hashed_password = get_password_hash(reset_data.new_password)
     user.reset_token = None
     user.reset_token_expires = None
@@ -323,7 +353,6 @@ async def reset_password(
     }
 
 
-# ===== CHANGE PASSWORD (Authenticated) =====
 @router.post("/change-password")
 async def change_password(
     password_data: PasswordChange,
@@ -331,14 +360,12 @@ async def change_password(
     db: AsyncSession = Depends(get_db)
 ):
     """Change password for authenticated user"""
-    # Verify current password
     if not verify_password(password_data.current_password, current_user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect"
         )
     
-    # Update password
     current_user.hashed_password = get_password_hash(password_data.new_password)
     await db.commit()
     
@@ -348,7 +375,6 @@ async def change_password(
     }
 
 
-# ===== GET CURRENT USER =====
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information"""
@@ -357,11 +383,11 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
         username=current_user.username,
         email=current_user.email,
         is_active=current_user.is_active,
+        is_superuser=current_user.is_superuser,
         created_at=current_user.created_at.isoformat()
     )
 
 
-# ===== CHECK AUTH =====
 @router.get("/check")
 async def check_auth(
     db: AsyncSession = Depends(get_db),
@@ -373,6 +399,50 @@ async def check_auth(
         "user": {
             "id": current_user.id,
             "username": current_user.username,
-            "email": current_user.email
+            "email": current_user.email,
+            "is_superuser": current_user.is_superuser
         }
     }
+
+
+async def send_password_reset_email(email: str, reset_token: str):
+    """Send password reset email (production only)"""
+    if not settings.PRODUCTION:
+        return
+    
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+        
+        message = MIMEMultipart("alternative")
+        message["Subject"] = "Restablecer Contraseña - Tax Forms Processor"
+        message["From"] = settings.EMAIL_FROM
+        message["To"] = email
+        
+        html = f"""
+        <html>
+          <body>
+            <h2>Restablecer Contraseña</h2>
+            <p>Has solicitado restablecer tu contraseña.</p>
+            <p>Haz clic en el siguiente enlace para continuar:</p>
+            <p><a href="{reset_link}">Restablecer Contraseña</a></p>
+            <p>Este enlace expirará en 1 hora.</p>
+            <p>Si no solicitaste este cambio, ignora este correo.</p>
+          </body>
+        </html>
+        """
+        
+        part = MIMEText(html, "html")
+        message.attach(part)
+        
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+            server.starttls()
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+            server.sendmail(settings.EMAIL_FROM, email, message.as_string())
+            
+    except Exception as e:
+        print(f"❌ Error sending email: {str(e)}")
+        pass

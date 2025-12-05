@@ -1,10 +1,11 @@
 """
-Enhanced Database Models - COMPATIBLE with original project
-✅ UPDATED Form103Totals with ALL 10 fields
+Enhanced Database Models - FULLY FIXED
+All relationships corrected - ready to use
 """
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey, JSON, Enum, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Text, Float, ForeignKey, JSON, Enum, Boolean, BigInteger
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from app.core.database import Base
 import enum
@@ -69,7 +70,11 @@ class Document(Base):
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
     processed_at = Column(DateTime(timezone=True), nullable=True)
     
-    # Relationships
+    # ✅ User relationship
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    user = relationship("User", back_populates="documents")
+    
+    # Relationships to forms
     form_103_items = relationship("Form103LineItem", back_populates="document", cascade="all, delete-orphan")
     form_104_data = relationship("Form104Data", back_populates="document", cascade="all, delete-orphan", uselist=False)
     form_103_totals = relationship("Form103Totals", back_populates="document", cascade="all, delete-orphan", uselist=False)
@@ -95,7 +100,10 @@ class Form103LineItem(Base):
     # Ordering
     order_index = Column(Integer, nullable=False, default=0)
     
-    # Relationship
+    # ✅ User relationship - NO back_populates since User doesn't have form_103_items
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    
+    # Relationship to document
     document = relationship("Document", back_populates="form_103_items")
     
     def __repr__(self):
@@ -137,7 +145,10 @@ class Form104Data(Base):
     total_consolidado_iva = Column(Float, default=0.0)
     total_pagado = Column(Float, default=0.0)
     
-    # Relationship
+    # ✅ User relationship - NO back_populates since User doesn't have form_104_data
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    
+    # Relationship to document
     document = relationship("Document", back_populates="form_104_data")
     
     def __repr__(self):
@@ -155,23 +166,28 @@ class Form103Totals(Base):
     document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
     
     # ✅ ALL 10 TOTALS FIELDS
-    subtotal_operaciones_pais = Column(Float, nullable=True, default=0.0)      # Code 349
-    subtotal_retencion = Column(Float, nullable=True, default=0.0)             # Code 399
-    pagos_no_sujetos = Column(Float, nullable=True, default=0.0)               # Code 332
-    otras_retenciones_base = Column(Float, nullable=True, default=0.0)         # Code 3440
-    otras_retenciones_retenido = Column(Float, nullable=True, default=0.0)     # Code 3940
-    total_retencion = Column(Float, nullable=True, default=0.0)                # Code 499
-    total_impuesto_pagar = Column(Float, nullable=True, default=0.0)           # Code 902
-    interes_mora = Column(Float, nullable=True, default=0.0)                   # Code 903
-    multa = Column(Float, nullable=True, default=0.0)                          # Code 904
-    total_pagado = Column(Float, nullable=True, default=0.0)                   # Code 999
+    subtotal_operaciones_pais = Column(Float, nullable=True, default=0.0)
+    subtotal_retencion = Column(Float, nullable=True, default=0.0)
+    pagos_no_sujetos = Column(Float, nullable=True, default=0.0)
+    otras_retenciones_base = Column(Float, nullable=True, default=0.0)
+    otras_retenciones_retenido = Column(Float, nullable=True, default=0.0)
+    total_retencion = Column(Float, nullable=True, default=0.0)
+    total_impuesto_pagar = Column(Float, nullable=True, default=0.0)
+    interes_mora = Column(Float, nullable=True, default=0.0)
+    multa = Column(Float, nullable=True, default=0.0)
+    total_pagado = Column(Float, nullable=True, default=0.0)
     
     # Relationship
     document = relationship("Document", back_populates="form_103_totals")
     
     def __repr__(self):
         return f"<Form103Totals: Doc {self.document_id} - Total {self.total_pagado}>"
-    # User model for authentication
+
+
+# ===================================
+# User Model
+# ===================================
+
 class User(Base):
     """User model for authentication"""
     __tablename__ = "users"
@@ -185,10 +201,72 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)
     
-
-     # Password reset fields
+    # Password reset fields
     reset_token = Column(String(500), nullable=True)
     reset_token_expires = Column(DateTime(timezone=True), nullable=True)
     
+    # ✅ ONLY these relationships (documents and analytics)
+    documents = relationship("Document", back_populates="user", cascade="all, delete-orphan")
+    analytics = relationship("UsageAnalytics", back_populates="user")
+
     def __repr__(self):
         return f"<User {self.username}>"
+
+
+# ===================================
+# Guest Session Model
+# ===================================
+
+class GuestSession(Base):
+    """Track guest user sessions and document upload limits"""
+    __tablename__ = "guest_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(255), unique=True, nullable=False, index=True)
+    document_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    last_activity = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(Text, nullable=True)
+
+    # Relationship to temporary files
+    temporary_files = relationship("TemporaryFile", back_populates="guest_session", cascade="all, delete-orphan")
+
+
+# ===================================
+# Temporary File Model
+# ===================================
+
+class TemporaryFile(Base):
+    """Track temporary files for guest users"""
+    __tablename__ = "temporary_files"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(String(255), ForeignKey("guest_sessions.session_id", ondelete="CASCADE"), nullable=False, index=True)
+    file_path = Column(String(500), nullable=False)
+    file_size = Column(BigInteger, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+
+    # Relationship
+    guest_session = relationship("GuestSession", back_populates="temporary_files")
+
+
+# ===================================
+# Usage Analytics Model
+# ===================================
+
+class UsageAnalytics(Base):
+    """Track usage events for analytics"""
+    __tablename__ = "usage_analytics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_type = Column(String(50), nullable=False, index=True)
+    
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    session_id = Column(String(255), nullable=True)
+    event_data = Column(JSONB, nullable=True)  # ✅ FIXED: was 'metadata'
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+    # Relationship
+    user = relationship("User", back_populates="analytics")
