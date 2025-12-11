@@ -241,12 +241,13 @@ export const exportYearlyPDF = async (
 }
 
 // ===== PASSWORD MANAGEMENT =====
-export async function register(username: string, email: string, password: string, confirmPassword: string) {
+export async function register(username: string, email: string, password: string, confirmPassword: string, recaptchaToken?: string) {
   const response = await api.post('/api/auth/register', {
     username,
     email,
     password,
-    confirm_password: confirmPassword
+    confirm_password: confirmPassword,
+    recaptcha_token: recaptchaToken
   })
   return response.data
 }
@@ -273,5 +274,6 @@ export async function changePassword(currentPassword: string, newPassword: strin
   })
   return response.data
 }
+
 
 export default api

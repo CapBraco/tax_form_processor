@@ -179,3 +179,45 @@ async def delete_user(
         "success": True,
         "message": "User deleted successfully"
     }
+@router.post("/cleanup/dry-run")
+async def cleanup_dry_run(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Preview what would be deleted (admin only)"""
+    from app.services.document_cleanup_service import document_cleanup_service
+    
+    stats = await document_cleanup_service.cleanup_old_documents(db, dry_run=True)
+    return stats
+
+
+@router.post("/cleanup/execute")
+async def cleanup_execute(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Execute cleanup (admin only)"""
+    from app.services.document_cleanup_service import document_cleanup_service
+    
+    stats = await document_cleanup_service.cleanup_old_documents(db, dry_run=False)
+    return {
+        "success": True,
+        "message": "Cleanup completed",
+        **stats
+    }
+
+
+@router.post("/cleanup/guest")
+async def cleanup_guest(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
+    """Cleanup guest documents older than 24h (admin only)"""
+    from app.services.document_cleanup_service import document_cleanup_service
+    
+    stats = await document_cleanup_service.cleanup_guest_documents(db, dry_run=False)
+    return {
+        "success": True,
+        "message": "Guest cleanup completed",
+        **stats
+    }

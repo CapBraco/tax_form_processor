@@ -36,6 +36,16 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     SESSION_COOKIE_NAME: str = "tax_app_session"
     
+    # ✅ Google OAuth Settings
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/auth/google/callback"
+    
+    # ✅ Google reCAPTCHA v3 Settings
+    RECAPTCHA_SECRET_KEY: str = ""
+    RECAPTCHA_SITE_KEY: str = ""  # For documentation purposes
+    RECAPTCHA_SCORE_THRESHOLD: float = 0.5  # Bot detection threshold (0.0-1.0)
+    
     # ✅ Email settings (OPTIONAL - only required in production)
     SMTP_HOST: Optional[str] = None
     SMTP_PORT: Optional[int] = None
@@ -46,7 +56,7 @@ class Settings(BaseSettings):
     # ✅ Production mode flag
     PRODUCTION: bool = False
     
-    # ✅ Frontend URL (for password reset emails)
+    # ✅ Frontend URL (for password reset emails and OAuth redirects)
     FRONTEND_URL: str = "http://localhost:3000"
     
     class Config:

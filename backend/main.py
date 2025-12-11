@@ -46,6 +46,8 @@ async def lifespan(app: FastAPI):
     logger.info(f"📁 Upload directory: {settings.UPLOAD_DIR}")
     
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+    from app.core.scheduler import start_scheduler
+    await start_scheduler()
     
     yield
     

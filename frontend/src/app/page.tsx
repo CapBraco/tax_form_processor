@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import Sidebar from '@/components/Sidebar'
@@ -16,17 +16,47 @@ export default function Home() {
   
   const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
-  // ✅ Auth check AFTER hooks are declared
+  // ✅ Handle OAuth redirect (Google OAuth callback)
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login')
+    // Check if redirected from Google OAuth
+    const urlParams = new URLSearchParams(window.location.search)
+    const oauthSuccess = urlParams.get('oauth')
+    
+    if (oauthSuccess === 'success') {
+      console.log('✅ OAuth login successful')
+      
+      // Remove oauth parameter from URL
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+      
+      // Force auth context to refresh
+      window.location.reload()
     }
-  }, [isAuthenticated, isLoading, router])
+    
+    // Check for OAuth errors
+    const oauthError = urlParams.get('error')
+    if (oauthError === 'oauth_failed') {
+      console.error('❌ OAuth login failed')
+      alert('Error al iniciar sesión con Google. Por favor intenta de nuevo.')
+      
+      // Remove error parameter from URL
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+    }
+  }, [])
 
   // Handle client selection from sidebar
   const handleClientSelect = (razonSocial: string) => {
     console.log('📍 Client selected:', razonSocial)
+    
+    // ✅ Check authentication before allowing client access
+    if (!isAuthenticated) {
+      router.push('/login?redirect=clientes')
+      return
+    }
+    
     setSelectedClient(razonSocial)
     setActiveSection('clientes')
     setIsMobileSidebarOpen(false) // Close sidebar on mobile
@@ -35,6 +65,13 @@ export default function Home() {
   // Handle section navigation
   const handleSectionChange = (section: string) => {
     console.log('🔀 Section changed to:', section)
+    
+    // ✅ Check authentication for Clientes section
+    if (section === 'clientes' && !isAuthenticated) {
+      router.push('/login?redirect=clientes')
+      return
+    }
+    
     setActiveSection(section)
     setIsMobileSidebarOpen(false) // Close sidebar on mobile
     
@@ -57,11 +94,6 @@ export default function Home() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
-  }
-
-  // ✅ Don't render if not authenticated (after hooks)
-  if (!isAuthenticated) {
-    return null
   }
 
   return (
@@ -121,7 +153,7 @@ export default function Home() {
           <div className="font-bold mb-1">🐛 Debug Info</div>
           <div>Section: <span className="text-blue-300">{activeSection}</span></div>
           <div>Client: <span className="text-green-300">{selectedClient || 'none'}</span></div>
-          <div>Auth: <span className="text-yellow-300">{isAuthenticated ? 'Yes' : 'No'}</span></div>
+          <div>Auth: <span className="text-yellow-300">{isAuthenticated ? 'Yes' : 'Guest'}</span></div>
         </div>
       )}
     </div>

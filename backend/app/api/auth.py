@@ -1,13 +1,16 @@
 """
 Authentication API Endpoints
-Handles login, logout, registration, and password management
+Handles login, logout, registration, password management, Google OAuth, and reCAPTCHA
 """
 
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
+import httpx
 
 from app.core.database import get_db
 from app.core.config import settings
@@ -40,6 +43,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     confirm_password: str
+    recaptcha_token: Optional[str] = None  # ✅ Added reCAPTCHA token
     
     @field_validator('username')
     @classmethod
@@ -127,6 +131,116 @@ class LoginResponse(BaseModel):
     message: str
 
 
+# ============================================
+# ✅ RECAPTCHA VERIFICATION
+# ============================================
+async def verify_recaptcha(token: str, action: str = "register") -> bool:
+    """Verify reCAPTCHA v3 token"""
+    if not settings.RECAPTCHA_SECRET_KEY:
+        print("⚠️ reCAPTCHA not configured, skipping verification")
+        return True
+    
+    verify_url = "https://www.google.com/recaptcha/api/siteverify"
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                verify_url,
+                data={
+                    "secret": settings.RECAPTCHA_SECRET_KEY,
+                    "response": token
+                }
+            )
+            
+            if response.status_code != 200:
+                print(f"❌ reCAPTCHA API error: {response.status_code}")
+                return False
+            
+            result = response.json()
+            
+            # Check if verification was successful
+            if not result.get("success"):
+                print(f"❌ reCAPTCHA verification failed: {result.get('error-codes')}")
+                return False
+            
+            # Check score (v3 returns score 0.0 - 1.0)
+            score = result.get("score", 0)
+            if score < settings.RECAPTCHA_SCORE_THRESHOLD:
+                print(f"⚠️ Low reCAPTCHA score: {score} (threshold: {settings.RECAPTCHA_SCORE_THRESHOLD})")
+                return False
+            
+            # Verify action matches
+            if result.get("action") != action:
+                print(f"❌ Action mismatch: expected {action}, got {result.get('action')}")
+                return False
+            
+            print(f"✅ reCAPTCHA verified successfully (score: {score})")
+            return True
+            
+    except Exception as e:
+        print(f"❌ reCAPTCHA verification error: {str(e)}")
+        return False
+
+
+# ============================================
+# ✅ GOOGLE OAUTH HELPERS
+# ============================================
+def get_google_auth_url() -> str:
+    """Generate Google OAuth authorization URL"""
+    from urllib.parse import urlencode
+    
+    base_url = "https://accounts.google.com/o/oauth2/v2/auth"
+    params = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent"
+    }
+    
+    return f"{base_url}?{urlencode(params)}"
+
+
+async def get_google_user_info(code: str) -> dict:
+    """Exchange authorization code for user info"""
+    token_url = "https://oauth2.googleapis.com/token"
+    
+    async with httpx.AsyncClient() as client:
+        # Exchange code for tokens
+        token_response = await client.post(
+            token_url,
+            data={
+                "code": code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+                "grant_type": "authorization_code"
+            }
+        )
+        
+        if token_response.status_code != 200:
+            raise Exception(f"Failed to exchange code for token: {token_response.text}")
+        
+        tokens = token_response.json()
+        access_token = tokens.get("access_token")
+        
+        # Get user info
+        userinfo_response = await client.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        
+        if userinfo_response.status_code != 200:
+            raise Exception("Failed to get user info")
+        
+        return userinfo_response.json()
+
+
+# ============================================
+# AUTHENTICATION ENDPOINTS
+# ============================================
+
 @router.post("/login", response_model=LoginResponse)
 async def login(
     request: Request,
@@ -201,8 +315,23 @@ async def register(
     user_data: UserCreate,
     db: AsyncSession = Depends(get_db)
 ):
-    """Register a new user with analytics tracking"""
+    """Register a new user with reCAPTCHA verification"""
     try:
+        # ✅ Verify reCAPTCHA
+        if user_data.recaptcha_token:
+            is_valid = await verify_recaptcha(user_data.recaptcha_token, "register")
+            if not is_valid:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Verificación de reCAPTCHA fallida. Por favor intenta de nuevo."
+                )
+        elif settings.RECAPTCHA_SECRET_KEY:
+            # If reCAPTCHA is configured but no token provided
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="reCAPTCHA token requerido"
+            )
+        
         existing_user = await get_user_by_username(db, user_data.username)
         if existing_user:
             raise HTTPException(
@@ -274,6 +403,118 @@ async def register(
         )
 
 
+# ============================================
+# ✅ GOOGLE OAUTH ENDPOINTS
+# ============================================
+
+@router.get("/google/login")
+async def google_login():
+    """Redirect to Google OAuth consent screen"""
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google OAuth not configured"
+        )
+    
+    auth_url = get_google_auth_url()
+    return RedirectResponse(url=auth_url)
+
+
+@router.get("/google/callback")
+async def google_callback(
+    code: str,
+    response: Response,
+    db: AsyncSession = Depends(get_db)
+):
+    """Handle Google OAuth callback"""
+    try:
+        # Get user info from Google
+        user_info = await get_google_user_info(code)
+        
+        email = user_info.get("email")
+        google_id = user_info.get("id")
+        name = user_info.get("name", "")
+        
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Could not get email from Google"
+            )
+        
+        # Check if user exists
+        result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            # Create new user from Google account
+            # Generate username from email
+            username = email.split("@")[0]
+            
+            # Check if username exists and add number if needed
+            existing = await db.execute(
+                select(User).where(User.username.like(f"{username}%"))
+            )
+            count = len(existing.scalars().all())
+            if count > 0:
+                username = f"{username}{count + 1}"
+            
+            user = User(
+                username=username,
+                email=email,
+                google_id=google_id,
+                hashed_password="",  # No password for OAuth users
+                is_active=True,
+                is_superuser=False,
+                created_at=datetime.utcnow()
+            )
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+            
+            print(f"✅ New user created via Google OAuth: {username}")
+        else:
+            # Update google_id if not set
+            if not user.google_id:
+                user.google_id = google_id
+                await db.commit()
+        
+        # Update last login
+        user.last_login = datetime.utcnow()
+        await db.commit()
+        
+        # Create JWT token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.username}, expires_delta=access_token_expires
+        )
+        
+        # Set cookie
+        response = RedirectResponse(url=settings.FRONTEND_URL)
+        response.set_cookie(
+            key=settings.SESSION_COOKIE_NAME,
+            value=access_token,
+            httponly=True,
+            max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            samesite="lax",
+            secure=False
+        )
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Google OAuth error: {str(e)}")
+        # Redirect to login with error
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error=oauth_failed")
+
+
+# ============================================
+# PASSWORD MANAGEMENT ENDPOINTS
+# ============================================
+
 @router.post("/password-reset-request")
 async def request_password_reset(
     request_data: PasswordResetRequest,
@@ -300,7 +541,7 @@ async def request_password_reset(
             "message": "If the email exists, a password reset link has been sent"
         }
     
-    reset_link = f"{settings.FRONTEND_URL if hasattr(settings, 'FRONTEND_URL') else 'http://localhost:3000'}/reset-password?token={reset_token}"
+    reset_link = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
     
     return {
         "success": True,
@@ -375,6 +616,10 @@ async def change_password(
     }
 
 
+# ============================================
+# USER INFO ENDPOINTS
+# ============================================
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information"""
@@ -404,6 +649,10 @@ async def check_auth(
         }
     }
 
+
+# ============================================
+# EMAIL HELPER (Production only)
+# ============================================
 
 async def send_password_reset_email(email: str, reset_token: str):
     """Send password reset email (production only)"""

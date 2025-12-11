@@ -103,52 +103,54 @@ export default function Form104Display({
           </button>
         )}
 
-        {/* Header with Toggle and Export */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">{formData.filename}</h2>
-            <p className="text-gray-600">{formData.razon_social}</p>
-            <p className="text-sm text-gray-500">
+        {/* Header - Responsive */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+          <div className="min-w-0">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
+              {formData.filename}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 truncate">{formData.razon_social}</p>
+            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-500">
               {formData.periodo} | Fecha: {formData.fecha_recaudacion}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Zero Values Toggle */}
+          
+          {/* Mobile: Stack buttons vertically */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <button
               onClick={() => setHideZeroValues(!hideZeroValues)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+              className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-xs md:text-sm ${
                 hideZeroValues 
                   ? 'bg-purple-600 text-white border-purple-600' 
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:border-gray-400'
               }`}
             >
-              {hideZeroValues ? <EyeOff size={18} /> : <Eye size={18} />}
-              <span className="text-sm font-medium">
+              {hideZeroValues ? <EyeOff size={16} /> : <Eye size={16} />}
+              <span className="font-medium whitespace-nowrap">
                 {hideZeroValues ? 'Mostrar Ceros' : 'Ocultar Ceros'}
               </span>
             </button>
 
-            {/* Bruto Values Toggle */}
             <button
               onClick={() => setHideBrutoValues(!hideBrutoValues)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+              className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-xs md:text-sm ${
                 hideBrutoValues 
                   ? 'bg-blue-600 text-white border-blue-600' 
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:border-gray-400'
               }`}
             >
-              {hideBrutoValues ? <EyeOff size={18} /> : <Eye size={18} />}
-              <span className="text-sm font-medium">
+              {hideBrutoValues ? <EyeOff size={16} /> : <Eye size={16} />}
+              <span className="font-medium whitespace-nowrap">
                 {hideBrutoValues ? 'Mostrar Bruto' : 'Ocultar Bruto'}
               </span>
             </button>
 
             <button
               onClick={exportToCSV}
-              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              className="flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-xs md:text-sm"
             >
-              <Download size={18} />
-              <span>Export CSV</span>
+              <Download size={16} />
+              <span className="whitespace-nowrap">Export CSV</span>
             </button>
           </div>
         </div>

@@ -9,13 +9,16 @@ import {
   LogOut,
   Settings,
   KeyRound,
-  Shield  // ✅ Make sure this is imported
+  Shield,
+  LogIn,
+  Users
 } from 'lucide-react'
 import { useState } from 'react'
 import Link from 'next/link'
 import ClientesSection from './ClientesSection'
 import ThemeToggle from './ThemeToggle'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRouter } from 'next/navigation'
 
 interface SidebarProps {
   activeSection: string
@@ -32,7 +35,8 @@ export default function Sidebar({
   onClientSelect,
   clientsRefreshTrigger = 0
 }: SidebarProps) {
-  const { logout, user } = useAuth()
+  const { logout, user, isAuthenticated } = useAuth()
+  const router = useRouter()
   const [showUserMenu, setShowUserMenu] = useState(false)
 
   const menuItems = [
@@ -43,78 +47,94 @@ export default function Sidebar({
     { id: 'form104', label: 'Form 104', icon: Calculator, color: 'text-purple-600' },
   ]
 
-  // ✅ Add console log to debug
-  console.log('👤 Current user:', user)
-  console.log('🔐 Is superuser?', user?.is_superuser)
-
   return (
-    <aside className="w-64 bg-white dark:bg-gray-800 shadow-lg flex flex-col">
-      {/* Logo/Header */}
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+    <aside className="w-64 bg-white dark:bg-gray-800 shadow-lg flex flex-col h-screen">
+      {/* Logo/Header - Fixed */}
+      <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Tax Forms</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400">Form 103 & 104 Processor</p>
       </div>
 
-      {/* Navigation - Scrollable */}
-      <nav className="flex-1 overflow-y-auto p-4">
-        <ul className="space-y-2">
-          {menuItems.map((item) => {
-            const Icon = item.icon
-            const isActive = activeSection === item.id
-            
-            return (
-              <li key={item.id}>
-                <button
-                  onClick={() => setActiveSection(item.id)}
-                  className={`
-                    w-full flex items-center space-x-3 px-4 py-3 rounded-lg
-                    transition-colors duration-200
-                    ${isActive 
-                      ? 'bg-blue-600 text-white' 
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }
-                  `}
+      {/* ✅ FIXED: Scrollable container for ALL content between header and footer */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Navigation */}
+        <nav className="p-4">
+          <ul className="space-y-2">
+            {menuItems.map((item) => {
+              const Icon = item.icon
+              const isActive = activeSection === item.id
+              
+              return (
+                <li key={item.id}>
+                  <button
+                    onClick={() => setActiveSection(item.id)}
+                    className={`
+                      w-full flex items-center space-x-3 px-4 py-3 rounded-lg
+                      transition-colors duration-200
+                      ${isActive 
+                        ? 'bg-blue-600 text-white' 
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }
+                    `}
+                  >
+                    <Icon size={20} className={!isActive && item.color ? item.color : ''} />
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                </li>
+              )
+            })}
+
+            {/* ✅ Admin Panel Link - Show ONLY for superusers */}
+            {user?.is_superuser && (
+              <li>
+                <Link
+                  href="/admin"
+                  className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg
+                    text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700
+                    transition-colors duration-200"
                 >
-                  <Icon size={20} className={!isActive && item.color ? item.color : ''} />
-                  <span className="font-medium">{item.label}</span>
-                </button>
+                  <Shield size={20} className="text-purple-600" />
+                  <span className="font-medium">Admin Panel</span>
+                </Link>
               </li>
-            )
-          })}
+            )}
+          </ul>
+        </nav>
 
-          {/* ✅ Admin Panel Link - Show ONLY for superusers */}
-          {user?.is_superuser && (
-            <li>
-              <Link
-                href="/admin"
-                className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg
-                  text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700
-                  transition-colors duration-200"
-              >
-                <Shield size={20} className="text-purple-600" />
-                <span className="font-medium">Admin Panel</span>
-              </Link>
-            </li>
-          )}
-        </ul>
-
-        {/* Clientes Section */}
-        <div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4">
-          <div className="px-4 mb-2">
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              👥 Clientes
-            </h3>
+        {/* Clientes Section - Only for authenticated users */}
+        {isAuthenticated ? (
+          <div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4 px-4">
+            <div className="mb-2">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                👥 Clientes
+              </h3>
+            </div>
+            <ClientesSection 
+              onClientSelect={onClientSelect}
+              selectedClient={selectedClient}
+              refreshTrigger={clientsRefreshTrigger}
+            />
           </div>
-          <ClientesSection 
-            onClientSelect={onClientSelect}
-            selectedClient={selectedClient}
-            refreshTrigger={clientsRefreshTrigger}
-          />
-        </div>
+        ) : (
+          /* ✅ Guest Mode - Show Login Prompt for Clientes */
+          <div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4 px-4">
+            <div className="mb-2">
+              <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                👥 Clientes
+              </h3>
+            </div>
+            <div className="py-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-dashed border-blue-300 dark:border-blue-700">
+              <Users className="w-8 h-8 text-blue-600 dark:text-blue-400 mx-auto mb-3" />
+              <p className="text-xs text-center text-gray-600 dark:text-gray-400 mb-3 px-4">
+                Inicia sesión para acceder a la gestión de clientes
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Forms Legend */}
-        <div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4">
-          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+        <div className="border-t border-gray-200 dark:border-gray-700 mt-4 pt-4 px-4 pb-4">
+          <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Form Types:</p>
             <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
               <div className="flex items-center space-x-2">
@@ -128,12 +148,12 @@ export default function Sidebar({
             </div>
           </div>
         </div>
-      </nav>
+      </div>
 
-      {/* Footer with User Info */}
-      <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-3">
-        {/* User Profile with Dropdown */}
-        {user && (
+      {/* ✅ Footer - Fixed at bottom, NOT part of scrollable content */}
+      <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-3 flex-shrink-0">
+        {isAuthenticated && user ? (
+          /* Authenticated User Menu */
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
@@ -150,7 +170,6 @@ export default function Sidebar({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                   {user.username}
-                  {/* ✅ Show badge if superuser */}
                   {user.is_superuser && (
                     <span className="ml-2 text-xs bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded">
                       Admin
@@ -204,6 +223,22 @@ export default function Sidebar({
                 </div>
               </>
             )}
+          </div>
+        ) : (
+          /* ✅ Guest Mode - Login Button */
+          <div className="space-y-2">
+            <button
+              onClick={() => router.push('/login')}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 
+                bg-blue-600 text-white rounded-lg 
+                hover:bg-blue-700 transition-colors font-medium"
+            >
+              <LogIn size={18} />
+              Iniciar Sesión
+            </button>
+            <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+              Modo invitado: <strong>5 documentos max</strong>
+            </p>
           </div>
         )}
         

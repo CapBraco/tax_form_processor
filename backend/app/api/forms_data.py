@@ -1,16 +1,17 @@
 """
 Updated Forms Data API Endpoints
 ✅ NOW INCLUDES: Codes 332, 3440, 3940 in Form 103 responses
-✅ FIXED: Works for both guests and registered users
+✅ PROPER GUEST ISOLATION: Each guest only sees their own documents via session_id
+✅ Registered users see only their documents (by user_id)
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from typing import Optional
 
 from app.core.database import get_db
-from app.core.security import get_current_user_optional  # ✅ CHANGED: Optional auth
+from app.core.security import get_current_user_optional
 from app.models.base import Document, Form103LineItem, Form104Data, Form103Totals, FormTypeEnum, User
 
 router = APIRouter(tags=["forms-data"])
@@ -18,14 +19,15 @@ router = APIRouter(tags=["forms-data"])
 
 @router.get("/form-103/{document_id}")
 async def get_form_103_data(
-    document_id: int, 
+    document_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)  # ✅ ADDED: Optional auth
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Get Form 103 data with complete line items and ALL totals
     ✅ NOW INCLUDES: Code 332, 3440, 3940
-    ✅ Works for both guests and registered users
+    ✅ Proper guest isolation by session_id cookie
     """
     # Fetch document
     doc_query = select(Document).where(
@@ -38,13 +40,16 @@ async def get_form_103_data(
     if not document:
         raise HTTPException(status_code=404, detail="Form 103 document not found")
     
-    # ✅ Verify ownership if document belongs to a user
-    if document.user_id:
-        if not current_user or document.user_id != current_user.id:
-            raise HTTPException(
-                status_code=404,
-                detail="Document not found or you don't have permission to access it"
-            )
+    # ✅ Access control: Check ownership
+    if current_user:
+        # Registered user: must own the document
+        if document.user_id != current_user.id:
+            raise HTTPException(status_code=404, detail="Document not found")
+    else:
+        # Guest: must match session_id
+        session_id = request.cookies.get("session_id")
+        if not session_id or document.session_id != session_id:
+            raise HTTPException(status_code=404, detail="Document not found")
     
     # Fetch line items
     items_query = select(Form103LineItem).where(
@@ -80,11 +85,11 @@ async def get_form_103_data(
         # ✅ UPDATED: Now includes ALL 10 fields
         "totals": {
             "subtotal_operaciones_pais": totals.subtotal_operaciones_pais if totals else 0.0,
-            "subtotal_retencion": totals.subtotal_retencion if totals else 0.0,  # ✅ Code 332
+            "subtotal_retencion": totals.subtotal_retencion if totals else 0.0,
             "total_retencion": totals.total_retencion if totals else 0.0,
             "total_impuesto_pagar": totals.total_impuesto_pagar if totals else 0.0,
-            "interes_mora": totals.interes_mora if totals else 0.0,  # ✅ Code 3440
-            "multa": totals.multa if totals else 0.0,  # ✅ Code 3940
+            "interes_mora": totals.interes_mora if totals else 0.0,
+            "multa": totals.multa if totals else 0.0,
             "total_pagado": totals.total_pagado if totals else 0.0,
             "pagos_no_sujetos": totals.pagos_no_sujetos if totals else 0.0,
             "otras_retenciones_base": totals.otras_retenciones_base if totals else 0.0,
@@ -95,14 +100,15 @@ async def get_form_103_data(
 
 @router.get("/form-104/{document_id}")
 async def get_form_104_data(
-    document_id: int, 
+    document_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)  # ✅ ADDED: Optional auth
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Get Form 104 data with COMPLETE parsed data
     ✅ Returns ALL fields extracted by the parser (75+ fields)
-    ✅ Works for both guests and registered users
+    ✅ Proper guest isolation by session_id cookie
     """
     # Fetch document
     doc_query = select(Document).where(
@@ -115,13 +121,16 @@ async def get_form_104_data(
     if not document:
         raise HTTPException(status_code=404, detail="Form 104 document not found")
     
-    # ✅ Verify ownership if document belongs to a user
-    if document.user_id:
-        if not current_user or document.user_id != current_user.id:
-            raise HTTPException(
-                status_code=404,
-                detail="Document not found or you don't have permission to access it"
-            )
+    # ✅ Access control: Check ownership
+    if current_user:
+        # Registered user: must own the document
+        if document.user_id != current_user.id:
+            raise HTTPException(status_code=404, detail="Document not found")
+    else:
+        # Guest: must match session_id
+        session_id = request.cookies.get("session_id")
+        if not session_id or document.session_id != session_id:
+            raise HTTPException(status_code=404, detail="Document not found")
     
     # Fetch structured data from database
     data_query = select(Form104Data).where(Form104Data.document_id == document_id)
@@ -195,30 +204,41 @@ async def get_form_104_data(
 @router.get("/list-by-form-type/{form_type}")
 async def list_documents_by_form_type(
     form_type: str,
+    request: Request,
     skip: int = 0,
     limit: int = 100,
     db: AsyncSession = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_user_optional)  # ✅ ADDED: Optional auth
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     List all documents of a specific form type
-    ✅ FIXED: If logged in, show user's documents. If guest, show empty list.
+    ✅ PROPER ISOLATION: Each user/guest sees only their documents
+    - Registered users: filtered by user_id
+    - Guests: filtered by session_id from cookie
     """
-    
-    # ✅ Guests don't have saved documents
-    if not current_user:
-        return []
-    
     # Map string to enum
     form_type_enum = FormTypeEnum.FORM_103 if form_type == "form_103" else FormTypeEnum.FORM_104
     
-    # ✅ Query only user's documents
-    query = select(Document).where(
-        and_(
-            Document.form_type == form_type_enum,
-            Document.user_id == current_user.id
-        )
-    ).order_by(Document.uploaded_at.desc()).offset(skip).limit(limit)
+    if current_user:
+        # ✅ Registered user: show only their documents
+        query = select(Document).where(
+            and_(
+                Document.form_type == form_type_enum,
+                Document.user_id == current_user.id
+            )
+        ).order_by(Document.uploaded_at.desc()).offset(skip).limit(limit)
+    else:
+        # ✅ Guest: show only documents from THIS session
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            return []  # No session cookie = no documents
+        
+        query = select(Document).where(
+            and_(
+                Document.form_type == form_type_enum,
+                Document.session_id == session_id  # ✅ CRITICAL: Filter by session!
+            )
+        ).order_by(Document.uploaded_at.desc()).offset(skip).limit(limit)
     
     result = await db.execute(query)
     documents = result.scalars().all()

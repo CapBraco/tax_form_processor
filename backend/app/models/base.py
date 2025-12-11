@@ -73,6 +73,7 @@ class Document(Base):
     # ✅ User relationship
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     user = relationship("User", back_populates="documents")
+    session_id = Column(String, nullable=True, index=True)
     
     # Relationships to forms
     form_103_items = relationship("Form103LineItem", back_populates="document", cascade="all, delete-orphan")
@@ -200,7 +201,8 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)
-    
+    google_id = Column(String, unique=True, nullable=True, index=True)
+
     # Password reset fields
     reset_token = Column(String(500), nullable=True)
     reset_token_expires = Column(DateTime(timezone=True), nullable=True)
