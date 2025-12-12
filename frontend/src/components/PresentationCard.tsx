@@ -31,8 +31,8 @@ export default function PresentationCard() {
         onTouchEnd={handleDragEnd}
       >
         <div className="book-spine">
-          <div className="book-text">Developed by</div>
-          <div className="book-line"></div>
+          {/* <div className="book-text">Developed by</div> */}
+          {/* <div className="book-line"></div> */}
         </div>
       </div>
 
@@ -101,15 +101,12 @@ export default function PresentationCard() {
         /* =================================
            BOOK TAB - DRAGGABLE CORNER
         ================================= */
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=WindSong:wght@400;500&display=swap" rel="stylesheet">
         .book-tab {
           position: fixed;
           bottom: 20px;
           right: -60px;
-          width: 180px;
-          height: 60px;
+          width: 110px;
+          height: 50px;
           background: radial-gradient(circle at 50% 0%, #2a2a2a 0%, #141414 64%);
           border-radius: 8px 0 0 8px;
           cursor: grab;
@@ -196,7 +193,7 @@ export default function PresentationCard() {
 
         .book-text {
           font-family: 'Inter', sans-serif;
-          font-size: 11px;
+          font-size: 9px;
           font-weight: 600;
           color: #d4d4d8;
           text-transform: uppercase;
@@ -493,8 +490,8 @@ export default function PresentationCard() {
         }
 
         .logo-section {
-          position: relative;
-          top: -9em;
+          position: absolute;
+          top: -12.8em;
           left: 0;
           right: 0;
           margin: auto;
@@ -511,7 +508,7 @@ export default function PresentationCard() {
 
         .cap-text {
           font-family: 'Playfair Display', serif;
-          font-size: 1.8rem;
+          font-size: 1.8em;
           font-weight: 700;
           color: #d4d4d8;
           letter-spacing: 0.05em;
@@ -535,14 +532,15 @@ export default function PresentationCard() {
 
         .braco-text {
           font-family: 'WindSong', cursive;
-          font-size: 7vmin;
-          font-weight: 400;
+          font-size: 3.5em;
+          font-weight: 500;
           font-style: normal;
           color: #d4d4d8;
           margin: -0.5rem 0 0 0;
           line-height: 1;
           letter-spacing: 0.02em;
           position: relative;
+          top: 0.1em;
           text-shadow: 
             0 1px 0 rgba(0, 0, 0, 0.3),
             0 2px 0 rgba(0, 0, 0, 0.25),
@@ -742,10 +740,10 @@ export default function PresentationCard() {
         /* ✅ MOBILE RESPONSIVE */
         @media (max-width: 640px) {
           .book-tab {
-            bottom: 10px;
+            bottom: 20px;
             right: -70px;
-            width: 160px;
-            height: 50px;
+            width: 100px;
+            height: 40px;
           }
 
           .book-text {
@@ -761,10 +759,14 @@ export default function PresentationCard() {
             bottom: 10px;
             right: 10px;
           }
-        }
+          .braco-text{
+            font-size: 3em;
+          }
 
-        /* Load Fonts */
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=WindSong:wght@400;500&display=swap');
+          .logo-section{
+            top: -11em;
+          }
+        }
       `}</style>
     </>
   )

@@ -4,7 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Script from 'next/script'
-import MainLayoutWrapper from '@/components/MainLayoutWrapper'
+import MainLayoutWrapper from "@/components/MainLayoutWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -97,6 +97,14 @@ export default function RootLayout({
   return (
     <html lang="es" className="h-full">
       <head>
+        {/* ✅ Google Fonts - WindSong & Playfair Display */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=WindSong:wght@400;500&display=swap" 
+          rel="stylesheet" 
+        />
+
         {/* ✅ Google Analytics */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=G-150223665`}
@@ -114,7 +122,9 @@ export default function RootLayout({
       <body className={`${inter.className} h-full bg-gray-100 dark:bg-gray-900`}>
         <ThemeProvider>
           <AuthProvider>
-            {children}
+            <MainLayoutWrapper>
+              {children}
+            </MainLayoutWrapper>
           </AuthProvider>
         </ThemeProvider>
       </body>
