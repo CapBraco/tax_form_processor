@@ -231,33 +231,32 @@ function DashboardHome({ stats, onNavigate, isAuthenticated }: DashboardHomeProp
   ]
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 text-white">
-        <h1 className="text-3xl font-bold mb-2">Tax Forms Dashboard</h1>
-        <p className="text-blue-100">
-          Gestiona y procesa tus formularios 103 y 104
-          {!isAuthenticated && ' • Modo Invitado'}
+    <div className="space-y-4 max-w-7xl mx-auto">
+      {/* Welcome Section - Compact */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 rounded-lg shadow-lg p-4 text-white">
+        <h1 className="text-2xl font-bold mb-1">Tax Forms Dashboard</h1>
+        <p className="text-sm text-blue-100">
+          Gestiona y procesa tus formularios 103 y 104{!isAuthenticated && ' • Modo Invitado'}
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Grid - Compact */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statCards.map((card, index) => {
           const Icon = card.icon
           return (
             <div
               key={index}
               onClick={card.onClick}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer hover:shadow-lg transition-shadow"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{card.title}</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{card.value}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">{card.title}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{card.value}</p>
                 </div>
-                <div className={`${card.bgColor} p-3 rounded-lg`}>
-                  <Icon className={card.textColor} size={24} />
+                <div className={`${card.bgColor} p-2 rounded-lg`}>
+                  <Icon className={card.textColor} size={20} />
                 </div>
               </div>
             </div>
@@ -265,49 +264,111 @@ function DashboardHome({ stats, onNavigate, isAuthenticated }: DashboardHomeProp
         })}
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Acciones Rápidas</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* ✅ NEW LAYOUT: Forms Information Section - Centered & Compact */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-lg shadow-lg p-6">
+        <div className="text-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+            📄 Formularios Soportados
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Procesa automáticamente formularios oficiales del SRI (Ecuador)
+          </p>
+        </div>
+        
+        {/* Forms Illustration - Centered & Smaller */}
+        <div className="flex justify-center items-center my-4">
+          <img 
+            src="/forms-illustration.png" 
+            alt="Form 103 y Form 104 - SRI Ecuador" 
+            className="max-w-full h-auto rounded-lg shadow-xl"
+            style={{ maxHeight: '280px' }}
+          />
+        </div>
+
+        {/* Quick Actions - Below Illustration */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 mb-4">
           <button
             onClick={() => onNavigate('upload')}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
           >
-            <FileText className="w-5 h-5" />
+            <FileText className="w-4 h-4" />
             Subir Documentos
           </button>
           <button
             onClick={() => onNavigate('form103')}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
           >
-            <CheckCircle className="w-5 h-5" />
+            <CheckCircle className="w-4 h-4" />
             Ver Form 103
           </button>
           <button
             onClick={() => onNavigate('form104')}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
           >
-            <CheckCircle className="w-5 h-5" />
+            <CheckCircle className="w-4 h-4" />
             Ver Form 104
           </button>
         </div>
+
+        {/* Form Info Cards - Compact */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Form 103 Info */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md border-l-4 border-blue-500">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="bg-blue-100 dark:bg-blue-900/30 p-1.5 rounded">
+                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Form 103</h3>
+            </div>
+            <p className="text-xs text-gray-700 dark:text-gray-300 font-medium mb-1">
+              Declaración de Retenciones en la Fuente
+            </p>
+            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5 ml-3">
+              <li>• Retenciones de impuesto a la renta</li>
+              <li>• Base imponible y valores retenidos</li>
+            </ul>
+          </div>
+
+          {/* Form 104 Info */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md border-l-4 border-purple-500">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="bg-purple-100 dark:bg-purple-900/30 p-1.5 rounded">
+                <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Form 104</h3>
+            </div>
+            <p className="text-xs text-gray-700 dark:text-gray-300 font-medium mb-1">
+              Declaración de IVA
+            </p>
+            <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5 ml-3">
+              <li>• Ventas, compras y exportaciones</li>
+              <li>• Crédito tributario y retenciones</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-4 text-center">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            💡 <strong>Tip:</strong> Solo sube archivos PDF oficiales del SRI
+          </p>
+        </div>
       </div>
 
-      {/* Recent Activity - Optional */}
+      {/* Recent Activity - Compact & Optional */}
       {stats?.recent_uploads && stats.recent_uploads.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Actividad Reciente</h2>
-          <div className="space-y-3">
-            {stats.recent_uploads.slice(0, 5).map((upload: any, index: number) => (
-              <div key={index} className="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700 last:border-0">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-4 h-4 text-gray-400" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{upload.filename}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{upload.razon_social}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Actividad Reciente</h2>
+          <div className="space-y-2">
+            {stats.recent_uploads.slice(0, 3).map((upload: any, index: number) => (
+              <div key={index} className="flex items-center justify-between py-1.5 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{upload.filename}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{upload.razon_social}</p>
                   </div>
                 </div>
-                <span className="text-xs text-gray-500 dark:text-gray-400">{upload.created_at}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{upload.created_at}</span>
               </div>
             ))}
           </div>

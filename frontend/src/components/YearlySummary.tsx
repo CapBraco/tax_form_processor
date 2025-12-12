@@ -300,7 +300,7 @@ export default function YearlySummary({ razonSocial, year }: YearlySummaryProps)
         </p>
       </div>
 
-      {/* Form 103 Summary - ✅ SORTED BY MONTH */}
+      {/* Form 103 Summary - ✅ FIXED: Light mode styling */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
           📊 Formulario 103 - Resumen Anual
@@ -341,7 +341,8 @@ export default function YearlySummary({ razonSocial, year }: YearlySummaryProps)
                   </td>
                 </tr>
               ))}
-              <tr className="bg-gradient-to-r from-gray-800 to-gray-700 dark:from-gray-700 dark:to-gray-600 text-white font-bold">
+              {/* ✅ FIXED: Light mode gets gray-100 background, dark mode keeps gradient */}
+              <tr className="bg-gray-100 dark:bg-gradient-to-r dark:from-gray-800 dark:to-gray-700 text-gray-900 dark:text-white font-bold">
                 <td className="px-4 py-4 text-lg" colSpan={2}>TOTAL ANUAL</td>
                 <td className="px-4 py-4 text-right text-lg">
                   ${summaryData.form_103_summary.subtotal_operaciones_pais.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -361,7 +362,7 @@ export default function YearlySummary({ razonSocial, year }: YearlySummaryProps)
         </div>
       </div>
 
-      {/* Form 104 Summary - ✅ SORTED + ENHANCED WITH ALL KEY FIELDS */}
+      {/* Form 104 Summary - Already has proper light/dark styling */}
       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
           📈 Formulario 104 - Resumen Anual Completo

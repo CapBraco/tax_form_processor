@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Script from 'next/script'
+import MainLayoutWrapper from '@/components/MainLayoutWrapper'
 
 const inter = Inter({ subsets: ["latin"] });
 
