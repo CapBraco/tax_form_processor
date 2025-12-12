@@ -4,15 +4,15 @@
 
 :root {
   --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
+  --background-start-rgb: 245, 247, 250;
   --background-end-rgb: 255, 255, 255;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+    --background-start-rgb: 17, 24, 39;
+    --background-end-rgb: 31, 41, 55;
   }
 }
 
@@ -26,18 +26,145 @@ body {
     rgb(var(--background-start-rgb));
 }
 
-/* ✅ FIX: Ensure inputs have visible text color */
+/* ✅ LIGHT MODE: Ensure proper contrast for all text */
+body {
+  color: #111827; /* gray-900 - dark text for light mode */
+}
+
+.dark body {
+  color: #f9fafb; /* gray-50 - light text for dark mode */
+}
+
+/* ✅ Table text visibility in light mode */
+table thead th {
+  color: #111827 !important; /* dark text for light headers */
+}
+
+.dark table thead th {
+  color: #f9fafb !important; /* light text for dark headers */
+}
+
+table tbody td {
+  color: #1f2937; /* gray-800 - slightly softer than pure black */
+}
+
+.dark table tbody td {
+  color: #e5e7eb; /* gray-200 - light gray for dark mode */
+}
+
+/* ✅ Specific fixes for code text visibility */
+.text-gray-600 {
+  color: #4b5563 !important; /* Darker gray-600 for better contrast in light mode */
+}
+
+.dark .text-gray-600 {
+  color: #9ca3af !important; /* Original gray-400 for dark mode */
+}
+
+.text-gray-500 {
+  color: #6b7280 !important; /* Darker gray for light mode */
+}
+
+.dark .text-gray-500 {
+  color: #9ca3af !important; /* Lighter for dark mode */
+}
+
+/* ✅ Button text visibility */
+button {
+  color: inherit;
+}
+
+/* ✅ Input fields - proper contrast */
 input,
 textarea,
 select {
   color: #111827; /* gray-900 - dark text for light backgrounds */
+  background-color: #ffffff; /* white background in light mode */
+  border-color: #d1d5db; /* gray-300 - visible borders */
 }
 
-/* Dark mode input text */
+input::placeholder,
+textarea::placeholder,
+select::placeholder {
+  color: #6b7280; /* gray-500 - darker for better visibility */
+  opacity: 1;
+}
+
+/* ✅ Dark mode input text and background */
 .dark input,
 .dark textarea,
 .dark select {
   color: #f9fafb; /* gray-50 - light text for dark backgrounds */
+  background-color: #1f2937; /* gray-800 - dark background */
+  border-color: #4b5563; /* gray-600 */
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder,
+.dark select::placeholder {
+  color: #9ca3af; /* gray-400 - visible gray for dark mode */
+  opacity: 1;
+}
+
+/* ✅ Focus states */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: #3b82f6; /* blue-500 */
+}
+
+/* ✅ Card backgrounds - better contrast */
+.bg-white {
+  background-color: #ffffff;
+}
+
+.dark .bg-white {
+  background-color: #1f2937; /* gray-800 */
+}
+
+/* ✅ Border colors for better visibility */
+.border-gray-200 {
+  border-color: #e5e7eb;
+}
+
+.dark .border-gray-200 {
+  border-color: #374151; /* gray-700 */
+}
+
+.border-gray-300 {
+  border-color: #d1d5db;
+}
+
+.dark .border-gray-300 {
+  border-color: #4b5563; /* gray-600 */
+}
+
+/* ✅ Hover states for tables */
+.hover\:bg-gray-50:hover {
+  background-color: #f9fafb;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: #374151; /* gray-700 */
+}
+
+/* ✅ Background colors for sections */
+.bg-gray-50 {
+  background-color: #f9fafb;
+}
+
+.dark .bg-gray-50 {
+  background-color: #374151; /* gray-700 */
+}
+
+.bg-gray-100 {
+  background-color: #f3f4f6;
+}
+
+.dark .bg-gray-100 {
+  background-color: #4b5563; /* gray-600 */
 }
 
 @layer utilities {
@@ -53,27 +180,27 @@ select {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #f3f4f6; /* gray-100 */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: #9ca3af; /* gray-400 */
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #6b7280; /* gray-500 */
 }
 
 /* Dark mode scrollbar */
 .dark ::-webkit-scrollbar-track {
-  background: #374151;
+  background: #374151; /* gray-700 */
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: #6b7280;
+  background: #6b7280; /* gray-500 */
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #9ca3af; /* gray-400 */
 }

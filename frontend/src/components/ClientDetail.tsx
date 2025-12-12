@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, FileText, AlertCircle, TrendingUp, X, CheckCircle2, XCircle, ArrowRight, Download, ArrowLeft, RefreshCw, Eye, EyeOff } from 'lucide-react'
+import { Calendar, FileText, AlertCircle, TrendingUp, X, CheckCircle2, XCircle, ArrowRight, Download, ArrowLeft, RefreshCw, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react'
 import { getClientDocuments, getForm103Data, getForm104Data } from '@/lib/api'
 import type { ClientDocuments, MonthData } from '@/types'
 import YearlySummary from './YearlySummary'
@@ -18,7 +18,7 @@ const MONTH_NAMES = [
 
 type ViewMode = 'overview' | 'form103' | 'form104' | 'yearly-summary'
 
-// ✅ NEW: Helper function to validate year
+// ✅ Helper function to validate year
 function isValidYear(year: string | null): boolean {
   if (!year) return false
   if (year.toUpperCase() === 'UNKNOWN' || year.toUpperCase() === 'N/A') return false
@@ -64,7 +64,7 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
       } else {
         setData(clientData)
         
-        // ✅ FIX: Auto-select the most recent VALID year
+        // ✅ Auto-select the most recent VALID year
         const firstValidYear = clientData.years.find((y: any) => isValidYear(y.year))
         if (firstValidYear) {
           setSelectedYear(firstValidYear.year)
@@ -127,7 +127,7 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
   }
 
   const handleShowSummary = (year: string) => {
-    // ✅ FIX: Validate year before showing summary
+    // ✅ Validate year before showing summary
     if (!isValidYear(year)) {
       alert(`No se puede mostrar el resumen para el año "${year}". El período no es válido.`)
       return
@@ -203,12 +203,12 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
     )
   }
 
-  // Show Form 103 Detail
+  // Show Form 103 Detail WITH ACCORDION STYLE
   if (viewMode === 'form103' && formData) {
     return <Form103DetailView formData={formData} onBack={handleBackToOverview} formLoading={formLoading} />
   }
 
-  // Show Form 104 Detail - NOW USES REUSABLE COMPONENT
+  // Show Form 104 Detail - USES REUSABLE COMPONENT
   if (viewMode === 'form104' && formData) {
     if (formLoading) {
       return (
@@ -251,10 +251,12 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
       {/* Years Overview */}
       {data.years.length > 0 ? (
         data.years.map((yearData) => {
-          // ✅ FIX: Check if year is valid before rendering
+          // ✅ Check if year is valid before rendering
           const yearIsValid = isValidYear(yearData.year)
           
-          const totalMonths = yearData.months.length
+          // ✅ FIX: Always use 12 months as total, not just uploaded months
+          const totalMonths = 12
+          const uploadedMonths = yearData.months.length
           const completeMonths = yearData.months.filter(m => 
             m.forms.form_103 !== null && m.forms.form_104 !== null
           ).length
@@ -277,7 +279,7 @@ export default function ClientDetail({ razonSocial }: ClientDetailProps) {
                         )}
                       </h2>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {completeMonths} de {totalMonths} meses completos
+                        {completeMonths} de {totalMonths} meses completos ({uploadedMonths} meses con documentos)
                       </p>
                     </div>
                   </div>
@@ -484,7 +486,7 @@ function FormStatusButton({ formType, formName, formData, onView, color }: FormS
   )
 }
 
-// ✅ Form 103 Detail View Component WITH FILTER
+// ✅ Form 103 Detail View Component WITH ACCORDION STYLE
 interface FormDetailViewProps {
   formData: any
   onBack: () => void
@@ -493,12 +495,27 @@ interface FormDetailViewProps {
 
 function Form103DetailView({ formData, onBack, formLoading }: FormDetailViewProps) {
   const [hideZeroValues, setHideZeroValues] = useState(false)
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    lineItems: true,
+    totals: true
+  })
+
+  const toggleSection = (section: string) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
   
   // Filter line items based on hideZeroValues state
   const filteredLineItems = formData?.line_items?.filter((item: any) => {
     if (!hideZeroValues) return true
     return item.base_imponible !== 0 || item.valor_retenido !== 0
   }) || []
+
+  const formatValue = (value: any) => {
+    if (typeof value === 'number') {
+      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    }
+    return value || '0.00'
+  }
 
   const exportToCSV = () => {
     const headers = ['Concepto', 'Código Base', 'BASE IMPONIBLE', 'Código Retención', 'VALOR RETENIDO']
@@ -523,6 +540,34 @@ function Form103DetailView({ formData, onBack, formLoading }: FormDetailViewProp
     a.click()
   }
 
+  // Accordion Section Component
+  const AccordionSection = ({ 
+    id, 
+    title, 
+    bgColor, 
+    children 
+  }: { 
+    id: string
+    title: string
+    bgColor: string
+    children: React.ReactNode 
+  }) => (
+    <div className="mb-4 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <button
+        onClick={() => toggleSection(id)}
+        className={`w-full flex items-center justify-between p-3 md:p-4 ${bgColor} text-white font-semibold hover:opacity-90 transition-opacity`}
+      >
+        <span className="text-sm md:text-base">{title}</span>
+        {openSections[id] ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+      </button>
+      {openSections[id] && (
+        <div className="bg-white dark:bg-gray-800 p-2 md:p-4">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+
   if (formLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -533,7 +578,7 @@ function Form103DetailView({ formData, onBack, formLoading }: FormDetailViewProp
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 md:p-6">
         <button
           onClick={onBack}
           className="flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 mb-4"
@@ -542,121 +587,195 @@ function Form103DetailView({ formData, onBack, formLoading }: FormDetailViewProp
           Volver a la vista general
         </button>
 
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{formData.filename}</h2>
-            <p className="text-gray-600 dark:text-gray-400">{formData.razon_social}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">
+        {/* Header with Toggle and Export */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+          <div className="min-w-0">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
+              {formData.filename}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 truncate">{formData.razon_social}</p>
+            <p className="text-xs md:text-sm text-gray-500 dark:text-gray-500">
               {formData.periodo} | Fecha: {formData.fecha_recaudacion}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Hide Zeros Toggle */}
+          
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <button
               onClick={() => setHideZeroValues(!hideZeroValues)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
-                hideZeroValues
-                  ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
+              className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 transition-all text-xs md:text-sm ${
+                hideZeroValues 
+                  ? 'bg-purple-600 text-white border-purple-600' 
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
               }`}
             >
-              {hideZeroValues ? <EyeOff size={18} /> : <Eye size={18} />}
-              <span className="text-sm font-medium">
-                {hideZeroValues ? 'Mostrar Todos' : 'Ocultar Ceros'}
+              {hideZeroValues ? <EyeOff size={16} /> : <Eye size={16} />}
+              <span className="font-medium whitespace-nowrap">
+                {hideZeroValues ? 'Mostrar Ceros' : 'Ocultar Ceros'}
               </span>
             </button>
+
             <button
               onClick={exportToCSV}
-              className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+              className="flex items-center justify-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-xs md:text-sm"
             >
-              <Download size={18} />
-              <span>Export CSV</span>
+              <Download size={16} />
+              <span className="whitespace-nowrap">Export CSV</span>
             </button>
           </div>
         </div>
 
-        {/* Line Items Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-100 dark:bg-gray-700 border-b-2 border-gray-300 dark:border-gray-600">
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300">Concepto</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Código Base</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">BASE IMPONIBLE</th>
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">Código Ret.</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700 dark:text-gray-300">VALOR RETENIDO</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredLineItems.map((item: any) => (
-                <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">{item.concepto}</td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-700 dark:text-gray-300">{item.codigo_base}</td>
-                  <td className="px-4 py-3 text-sm text-right font-medium text-blue-700 dark:text-blue-400">
-                    ${item.base_imponible.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        {/* SECTION 1: LINE ITEMS */}
+        <AccordionSection 
+          id="lineItems" 
+          title="DETALLE DE RETENCIONES EN LA FUENTE" 
+          bgColor="bg-blue-600"
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr className="bg-blue-600 text-white">
+                  <th className="px-2 py-2 text-left border border-blue-700">Concepto</th>
+                  <th className="px-2 py-2 text-center border border-blue-700 w-16">Cód Base</th>
+                  <th className="px-2 py-2 text-right border border-blue-700 min-w-[100px]">BASE IMPONIBLE</th>
+                  <th className="px-2 py-2 text-center border border-blue-700 w-16">Cód Ret.</th>
+                  <th className="px-2 py-2 text-right border border-blue-700 min-w-[100px]">VALOR RETENIDO</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLineItems.map((item: any) => (
+                  <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="px-2 py-1 border dark:border-gray-700 text-gray-900 dark:text-gray-100">{item.concepto}</td>
+                    <td className="px-2 py-1 text-center border dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20 text-gray-600 dark:text-gray-400">{item.codigo_base}</td>
+                    <td className="px-2 py-1 text-right border dark:border-gray-700 font-medium text-blue-700 dark:text-blue-400">
+                      ${formatValue(item.base_imponible)}
+                    </td>
+                    <td className="px-2 py-1 text-center border dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20 text-gray-600 dark:text-gray-400">{item.codigo_retencion}</td>
+                    <td className="px-2 py-1 text-right border dark:border-gray-700 font-medium text-green-700 dark:text-green-400">
+                      ${formatValue(item.valor_retenido)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-yellow-50 dark:bg-yellow-900/20 border-t-2 border-yellow-600">
+                <tr>
+                  <td colSpan={2} className="px-2 py-3 text-sm font-semibold border dark:border-gray-700 text-gray-900 dark:text-gray-100">
+                    TOTAL {hideZeroValues && `(${filteredLineItems.length} de ${formData.line_items.length})`}
                   </td>
-                  <td className="px-4 py-3 text-sm text-center text-gray-700 dark:text-gray-300">{item.codigo_retencion}</td>
-                  <td className="px-4 py-3 text-sm text-right font-medium text-green-700 dark:text-green-400">
-                    ${item.valor_retenido.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <td className="px-2 py-3 text-sm text-right font-bold border dark:border-gray-700 text-blue-900 dark:text-blue-300">
+                    ${formatValue(filteredLineItems.reduce((sum: number, item: any) => sum + item.base_imponible, 0))}
+                  </td>
+                  <td className="px-2 py-3 border dark:border-gray-700"></td>
+                  <td className="px-2 py-3 text-sm text-right font-bold border dark:border-gray-700 text-green-900 dark:text-green-300">
+                    ${formatValue(filteredLineItems.reduce((sum: number, item: any) => sum + item.valor_retenido, 0))}
                   </td>
                 </tr>
-              ))}
-            </tbody>
-            <tfoot className="bg-gray-50 dark:bg-gray-700 border-t-2 border-gray-300 dark:border-gray-600">
-              <tr>
-                <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">TOTAL</td>
-                <td className="px-4 py-3 text-sm text-right font-bold text-blue-900 dark:text-blue-400">
-                  ${filteredLineItems.reduce((sum: number, item: any) => sum + item.base_imponible, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className="px-4 py-3"></td>
-                <td className="px-4 py-3 text-sm text-right font-bold text-green-900 dark:text-green-400">
-                  ${filteredLineItems.reduce((sum: number, item: any) => sum + item.valor_retenido, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        {/* Filter Info Message */}
-        {hideZeroValues && formData.line_items && (
-          <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-            Mostrando {filteredLineItems.length} de {formData.line_items.length} items 
-            {filteredLineItems.length < formData.line_items.length && (
-              <span className="ml-1 text-blue-600 dark:text-blue-400">
-                (ocultando {formData.line_items.length - filteredLineItems.length} items con valores en cero)
-              </span>
-            )}
+              </tfoot>
+            </table>
           </div>
-        )}
 
-        {/* Summary Totals */}
+          {hideZeroValues && (
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+              Mostrando {filteredLineItems.length} items con valores (ocultando {formData.line_items.length - filteredLineItems.length} items en cero)
+            </div>
+          )}
+        </AccordionSection>
+
+        {/* SECTION 2: TOTALS SUMMARY */}
         {formData.totals && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Subtotal Operaciones País</p>
-              <p className="text-xl font-bold text-blue-700 dark:text-blue-400">
-                ${formData.totals.subtotal_operaciones?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
+          <AccordionSection 
+            id="totals" 
+            title="RESUMEN DE TOTALES" 
+            bgColor="bg-green-600"
+          >
+            {/* Row 1: Main Totals (4 fields) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-4">
+              <div className="border-2 rounded-lg p-3 md:p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Subtotal Operaciones País</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-1">(349)</p>
+                <p className="text-lg md:text-xl font-bold text-blue-700 dark:text-blue-400">
+                  ${formatValue(formData.totals.subtotal_operaciones_pais)}
+                </p>
+              </div>
+
+              <div className="border-2 rounded-lg p-3 md:p-4 bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Subtotal Retención</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-1">(399)</p>
+                <p className="text-lg md:text-xl font-bold text-cyan-700 dark:text-cyan-400">
+                  ${formatValue(formData.totals.subtotal_retencion)}
+                </p>
+              </div>
+
+              <div className="border-2 rounded-lg p-3 md:p-4 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Total Retención</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-1">(499)</p>
+                <p className="text-lg md:text-xl font-bold text-green-700 dark:text-green-400">
+                  ${formatValue(formData.totals.total_retencion)}
+                </p>
+              </div>
+
+              <div className="border-2 rounded-lg p-3 md:p-4 bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Total Pagado</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-1">(999)</p>
+                <p className="text-xl md:text-2xl font-bold text-purple-700 dark:text-purple-400">
+                  ${formatValue(formData.totals.total_pagado)}
+                </p>
+              </div>
             </div>
-            <div className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/20 dark:border-green-800">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Retención</p>
-              <p className="text-xl font-bold text-green-700 dark:text-green-400">
-                ${formData.totals.total_retencion?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
+
+            {/* Row 2: Additional Fields (3 fields) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4">
+              <div className="border-2 rounded-lg p-3 md:p-4 bg-gray-50 dark:bg-gray-700/50 border-gray-300 dark:border-gray-600">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Pagos No Sujetos</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-1">(332)</p>
+                <p className="text-lg md:text-xl font-bold text-gray-700 dark:text-gray-300">
+                  ${formatValue(formData.totals.pagos_no_sujetos)}
+                </p>
+              </div>
+
+              <div className="border-2 rounded-lg p-3 md:p-4 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Otras Retenciones Base</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-1">(3440)</p>
+                <p className="text-lg md:text-xl font-bold text-amber-700 dark:text-amber-400">
+                  ${formatValue(formData.totals.otras_retenciones_base)}
+                </p>
+              </div>
+
+              <div className="border-2 rounded-lg p-3 md:p-4 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Otras Retenciones Retenido</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-1">(3940)</p>
+                <p className="text-lg md:text-xl font-bold text-orange-700 dark:text-orange-400">
+                  ${formatValue(formData.totals.otras_retenciones_retenido)}
+                </p>
+              </div>
             </div>
-            <div className="border rounded-lg p-4 bg-yellow-50 dark:bg-yellow-900/20 dark:border-yellow-800">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Impuesto a Pagar</p>
-              <p className="text-xl font-bold text-yellow-700 dark:text-yellow-400">
-                ${formData.totals.total_impuesto_pagar?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
+
+            {/* Row 3: Final Fields (3 fields) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+              <div className="border-2 rounded-lg p-3 md:p-4 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Total Impuesto a Pagar</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-1">(902)</p>
+                <p className="text-lg md:text-xl font-bold text-yellow-700 dark:text-yellow-400">
+                  ${formatValue(formData.totals.total_impuesto_pagar)}
+                </p>
+              </div>
+
+              <div className="border-2 rounded-lg p-3 md:p-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Interés Mora</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-1">(903)</p>
+                <p className="text-lg md:text-xl font-bold text-red-700 dark:text-red-400">
+                  ${formatValue(formData.totals.interes_mora)}
+                </p>
+              </div>
+
+              <div className="border-2 rounded-lg p-3 md:p-4 bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+                <p className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Multa</p>
+                <p className="text-sm text-gray-500 dark:text-gray-500 mb-1">(904)</p>
+                <p className="text-lg md:text-xl font-bold text-red-700 dark:text-red-400">
+                  ${formatValue(formData.totals.multa)}
+                </p>
+              </div>
             </div>
-            <div className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-800">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Pagado</p>
-              <p className="text-xl font-bold text-purple-700 dark:text-purple-400">
-                ${formData.totals.total_pagado?.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-          </div>
+          </AccordionSection>
         )}
       </div>
     </div>

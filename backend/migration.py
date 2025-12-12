@@ -1,172 +1,258 @@
+"""Add all 127 fields to form_104_data table
+
+Revision ID: add_complete_form_104_fields
+Revises: [previous_revision_id]
+Create Date: 2025-12-11
+
+This migration adds ALL 127 fields from the complete Form 104 parser to the database.
+After this migration, the filter function can be removed.
 """
-Simple Database Migration: Add google_id to users table
-Compatible with your database setup
-"""
-
-import sys
-import os
-
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-import asyncio
-from sqlalchemy import text
-from app.core.database import engine
+from alembic import op
+import sqlalchemy as sa
 
 
-async def upgrade():
-    """Add google_id column to users table"""
-    print("🔄 Running migration: Add google_id to users table")
+# revision identifiers, used by Alembic.
+revision = 'add_complete_form_104_fields'
+down_revision = None  # TODO: Replace with your latest revision ID
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    """Add all missing Form 104 fields to form_104_data table"""
     
-    async with engine.begin() as conn:
-        # Check if column already exists
-        result = await conn.execute(text("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name='users' AND column_name='google_id';
-        """))
-        
-        exists = result.fetchone() is not None
-        
-        if exists:
-            print("  ⏭️  Column 'google_id' already exists, skipping...")
-            return
-        
-        # Add google_id column
-        await conn.execute(text("""
-            ALTER TABLE users 
-            ADD COLUMN google_id VARCHAR(255);
-        """))
-        
-        print("  ✅ Column 'google_id' added successfully")
-        
-        # Add unique constraint
-        try:
-            await conn.execute(text("""
-                ALTER TABLE users 
-                ADD CONSTRAINT users_google_id_unique UNIQUE (google_id);
-            """))
-            print("  ✅ Unique constraint added")
-        except Exception as e:
-            print(f"  ⚠️  Unique constraint may already exist: {str(e)}")
-        
-        # Create index for performance
-        try:
-            await conn.execute(text("""
-                CREATE INDEX ix_users_google_id 
-                ON users (google_id);
-            """))
-            print("  ✅ Index 'ix_users_google_id' created successfully")
-        except Exception as e:
-            print(f"  ⚠️  Index may already exist: {str(e)}")
-
-
-async def downgrade():
-    """Remove google_id column from users table"""
-    print("🔄 Running migration rollback: Remove google_id from users table")
+    # ===== VENTAS SECTION (NEW FIELDS) =====
+    op.add_column('form_104_data', sa.Column('ventas_activos_fijos_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ventas_activos_fijos_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_generado_activos_fijos', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ventas_tarifa_5_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ventas_tarifa_5_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_generado_tarifa_5', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('iva_ajuste_pagar', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('iva_ajuste_favor', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ventas_0_sin_derecho_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ventas_0_sin_derecho_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('activos_fijos_0_sin_derecho_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('activos_fijos_0_sin_derecho_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ventas_0_con_derecho_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ventas_0_con_derecho_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('activos_fijos_0_con_derecho_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('activos_fijos_0_con_derecho_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('exportaciones_bienes_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('exportaciones_bienes_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('exportaciones_servicios_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('exportaciones_servicios_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('transferencias_no_objeto_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('transferencias_no_objeto_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('notas_credito_0_compensar', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('notas_credito_diferente_0_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('notas_credito_diferente_0_impuesto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ingresos_reembolso_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ingresos_reembolso_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ingresos_reembolso_impuesto', sa.Float(), server_default='0.0', nullable=True))
     
-    async with engine.begin() as conn:
-        # Drop index first
-        await conn.execute(text("""
-            DROP INDEX IF EXISTS ix_users_google_id;
-        """))
-        
-        print("  ✅ Index 'ix_users_google_id' dropped")
-        
-        # Drop unique constraint
-        await conn.execute(text("""
-            ALTER TABLE users 
-            DROP CONSTRAINT IF EXISTS users_google_id_unique;
-        """))
-        
-        print("  ✅ Unique constraint dropped")
-        
-        # Drop column
-        await conn.execute(text("""
-            ALTER TABLE users 
-            DROP COLUMN IF EXISTS google_id;
-        """))
-        
-        print("  ✅ Column 'google_id' removed")
-
-
-async def verify():
-    """Verify the migration was applied correctly"""
-    print("🔍 Verifying migration...")
+    # ===== LIQUIDACIÓN SECTION (NEW) =====
+    op.add_column('form_104_data', sa.Column('transferencias_contado_mes', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('transferencias_credito_mes', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_liquidar_mes_anterior', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_liquidar_este_mes', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_liquidar_proximo_mes', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('mes_pagar_iva_credito', sa.Integer(), server_default='0', nullable=True))
+    op.add_column('form_104_data', sa.Column('tamano_copci', sa.String(50), server_default='No aplica', nullable=True))
+    op.add_column('form_104_data', sa.Column('total_impuesto_liquidar_mes', sa.Float(), server_default='0.0', nullable=True))
     
-    async with engine.begin() as conn:
-        # Check if column exists
-        result = await conn.execute(text("""
-            SELECT column_name, data_type, is_nullable
-            FROM information_schema.columns 
-            WHERE table_name='users' AND column_name='google_id';
-        """))
-        
-        row = result.fetchone()
-        
-        if row:
-            print(f"  ✅ Column 'google_id' exists:")
-            print(f"     - Type: {row[1]}")
-            print(f"     - Nullable: {row[2]}")
-            
-            # Check unique constraint
-            result = await conn.execute(text("""
-                SELECT constraint_name 
-                FROM information_schema.table_constraints 
-                WHERE table_name='users' 
-                AND constraint_type='UNIQUE'
-                AND constraint_name='users_google_id_unique';
-            """))
-            
-            if result.fetchone():
-                print("  ✅ Unique constraint exists")
-            else:
-                print("  ⚠️  Unique constraint not found")
-            
-            # Check index
-            result = await conn.execute(text("""
-                SELECT indexname 
-                FROM pg_indexes 
-                WHERE tablename='users' AND indexname='ix_users_google_id';
-            """))
-            
-            if result.fetchone():
-                print("  ✅ Index 'ix_users_google_id' exists")
-            else:
-                print("  ⚠️  Index 'ix_users_google_id' not found")
-        else:
-            print("  ❌ Column 'google_id' not found")
-
-
-async def main():
-    """Main entry point"""
-    if len(sys.argv) < 2:
-        print("Usage: python migration_add_google_id.py [upgrade|downgrade|verify]")
-        sys.exit(1)
+    # ===== COMPRAS SECTION (NEW FIELDS) =====
+    op.add_column('form_104_data', sa.Column('activos_fijos_diferente_0_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('activos_fijos_diferente_0_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_activos_fijos_diferente_0', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_tarifa_5_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_tarifa_5_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_adquisiciones_tarifa_5', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_sin_derecho_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_sin_derecho_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_adquisiciones_sin_derecho', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('importaciones_servicios_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('importaciones_servicios_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_importaciones_servicios', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('importaciones_bienes_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('importaciones_bienes_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_importaciones_bienes', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('importaciones_activos_fijos_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('importaciones_activos_fijos_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('impuesto_importaciones_activos_fijos', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('importaciones_0_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('importaciones_0_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_0_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_0_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_rise_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_rise_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('total_adquisiciones_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('total_impuesto_adquisiciones', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_no_objeto_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_no_objeto_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_exentas_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('adquisiciones_exentas_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('notas_credito_compras_0_compensar', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('notas_credito_compras_diferente_0_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('notas_credito_compras_diferente_0_impuesto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('pagos_reembolso_bruto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('pagos_reembolso_neto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('pagos_reembolso_impuesto', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('factor_proporcionalidad', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('iva_no_considerado_credito', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ajuste_positivo_credito', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ajuste_negativo_credito', sa.Float(), server_default='0.0', nullable=True))
     
-    command = sys.argv[1]
+    # ===== EXPORTACIONES SECTION (NEW) =====
+    op.add_column('form_104_data', sa.Column('importaciones_materias_primas_valor', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('importaciones_materias_primas_isd_pagado', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('proporcion_ingreso_neto_divisas', sa.Float(), server_default='0.0', nullable=True))
     
-    try:
-        if command == "upgrade":
-            await upgrade()
-            await verify()
-        elif command == "downgrade":
-            await downgrade()
-        elif command == "verify":
-            await verify()
-        else:
-            print(f"Unknown command: {command}")
-            print("Usage: python migration_add_google_id.py [upgrade|downgrade|verify]")
-            sys.exit(1)
-        
-        print("\n✅ Migration completed successfully!")
-        
-    except Exception as e:
-        print(f"\n❌ Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    # ===== TOTALS SECTION (NEW FIELDS) =====
+    op.add_column('form_104_data', sa.Column('compensacion_iva_medio_electronico', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('saldo_credito_anterior_adquisiciones', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('saldo_credito_anterior_retenciones', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('saldo_credito_anterior_compensacion_electronico', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('saldo_credito_anterior_zonas_afectadas', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('iva_devuelto_adultos_mayores', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ajuste_iva_devuelto_electronico', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ajuste_iva_devuelto_adquisiciones', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ajuste_iva_devuelto_retenciones', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ajuste_iva_otras_instituciones', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('saldo_credito_proximo_adquisiciones', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('saldo_credito_proximo_retenciones', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('saldo_credito_proximo_compensacion_electronico', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('saldo_credito_proximo_zonas_afectadas', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('iva_pagado_no_compensado', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ajuste_credito_superior_5_anos', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ajuste_reduccion_impuesto_tarifa_5', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ajuste_reduccion_impuesto_iva_diferencial', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('ajuste_credito_compensacion_zonas_afectadas', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('saldo_credito_anterior_iva_medio_electronico', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('saldo_credito_proximo_iva_electronico', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('total_impuesto_pagar_percepcion', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('total_impuesto_a_pagar', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('interes_mora', sa.Float(), server_default='0.0', nullable=True))
+    op.add_column('form_104_data', sa.Column('multa', sa.Float(), server_default='0.0', nullable=True))
+    
+    print("✅ Added all 127 Form 104 fields to form_104_data table")
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+def downgrade():
+    """Remove all the added fields"""
+    
+    # VENTAS
+    op.drop_column('form_104_data', 'ventas_activos_fijos_bruto')
+    op.drop_column('form_104_data', 'ventas_activos_fijos_neto')
+    op.drop_column('form_104_data', 'impuesto_generado_activos_fijos')
+    op.drop_column('form_104_data', 'ventas_tarifa_5_bruto')
+    op.drop_column('form_104_data', 'ventas_tarifa_5_neto')
+    op.drop_column('form_104_data', 'impuesto_generado_tarifa_5')
+    op.drop_column('form_104_data', 'iva_ajuste_pagar')
+    op.drop_column('form_104_data', 'iva_ajuste_favor')
+    op.drop_column('form_104_data', 'ventas_0_sin_derecho_bruto')
+    op.drop_column('form_104_data', 'ventas_0_sin_derecho_neto')
+    op.drop_column('form_104_data', 'activos_fijos_0_sin_derecho_bruto')
+    op.drop_column('form_104_data', 'activos_fijos_0_sin_derecho_neto')
+    op.drop_column('form_104_data', 'ventas_0_con_derecho_bruto')
+    op.drop_column('form_104_data', 'ventas_0_con_derecho_neto')
+    op.drop_column('form_104_data', 'activos_fijos_0_con_derecho_bruto')
+    op.drop_column('form_104_data', 'activos_fijos_0_con_derecho_neto')
+    op.drop_column('form_104_data', 'exportaciones_bienes_bruto')
+    op.drop_column('form_104_data', 'exportaciones_bienes_neto')
+    op.drop_column('form_104_data', 'exportaciones_servicios_bruto')
+    op.drop_column('form_104_data', 'exportaciones_servicios_neto')
+    op.drop_column('form_104_data', 'transferencias_no_objeto_bruto')
+    op.drop_column('form_104_data', 'transferencias_no_objeto_neto')
+    op.drop_column('form_104_data', 'notas_credito_0_compensar')
+    op.drop_column('form_104_data', 'notas_credito_diferente_0_bruto')
+    op.drop_column('form_104_data', 'notas_credito_diferente_0_impuesto')
+    op.drop_column('form_104_data', 'ingresos_reembolso_bruto')
+    op.drop_column('form_104_data', 'ingresos_reembolso_neto')
+    op.drop_column('form_104_data', 'ingresos_reembolso_impuesto')
+    
+    # LIQUIDACIÓN
+    op.drop_column('form_104_data', 'transferencias_contado_mes')
+    op.drop_column('form_104_data', 'transferencias_credito_mes')
+    op.drop_column('form_104_data', 'impuesto_liquidar_mes_anterior')
+    op.drop_column('form_104_data', 'impuesto_liquidar_este_mes')
+    op.drop_column('form_104_data', 'impuesto_liquidar_proximo_mes')
+    op.drop_column('form_104_data', 'mes_pagar_iva_credito')
+    op.drop_column('form_104_data', 'tamano_copci')
+    op.drop_column('form_104_data', 'total_impuesto_liquidar_mes')
+    
+    # COMPRAS
+    op.drop_column('form_104_data', 'activos_fijos_diferente_0_bruto')
+    op.drop_column('form_104_data', 'activos_fijos_diferente_0_neto')
+    op.drop_column('form_104_data', 'impuesto_activos_fijos_diferente_0')
+    op.drop_column('form_104_data', 'adquisiciones_tarifa_5_bruto')
+    op.drop_column('form_104_data', 'adquisiciones_tarifa_5_neto')
+    op.drop_column('form_104_data', 'impuesto_adquisiciones_tarifa_5')
+    op.drop_column('form_104_data', 'adquisiciones_sin_derecho_bruto')
+    op.drop_column('form_104_data', 'adquisiciones_sin_derecho_neto')
+    op.drop_column('form_104_data', 'impuesto_adquisiciones_sin_derecho')
+    op.drop_column('form_104_data', 'importaciones_servicios_bruto')
+    op.drop_column('form_104_data', 'importaciones_servicios_neto')
+    op.drop_column('form_104_data', 'impuesto_importaciones_servicios')
+    op.drop_column('form_104_data', 'importaciones_bienes_bruto')
+    op.drop_column('form_104_data', 'importaciones_bienes_neto')
+    op.drop_column('form_104_data', 'impuesto_importaciones_bienes')
+    op.drop_column('form_104_data', 'importaciones_activos_fijos_bruto')
+    op.drop_column('form_104_data', 'importaciones_activos_fijos_neto')
+    op.drop_column('form_104_data', 'impuesto_importaciones_activos_fijos')
+    op.drop_column('form_104_data', 'importaciones_0_bruto')
+    op.drop_column('form_104_data', 'importaciones_0_neto')
+    op.drop_column('form_104_data', 'adquisiciones_0_bruto')
+    op.drop_column('form_104_data', 'adquisiciones_0_neto')
+    op.drop_column('form_104_data', 'adquisiciones_rise_bruto')
+    op.drop_column('form_104_data', 'adquisiciones_rise_neto')
+    op.drop_column('form_104_data', 'total_adquisiciones_neto')
+    op.drop_column('form_104_data', 'total_impuesto_adquisiciones')
+    op.drop_column('form_104_data', 'adquisiciones_no_objeto_bruto')
+    op.drop_column('form_104_data', 'adquisiciones_no_objeto_neto')
+    op.drop_column('form_104_data', 'adquisiciones_exentas_bruto')
+    op.drop_column('form_104_data', 'adquisiciones_exentas_neto')
+    op.drop_column('form_104_data', 'notas_credito_compras_0_compensar')
+    op.drop_column('form_104_data', 'notas_credito_compras_diferente_0_bruto')
+    op.drop_column('form_104_data', 'notas_credito_compras_diferente_0_impuesto')
+    op.drop_column('form_104_data', 'pagos_reembolso_bruto')
+    op.drop_column('form_104_data', 'pagos_reembolso_neto')
+    op.drop_column('form_104_data', 'pagos_reembolso_impuesto')
+    op.drop_column('form_104_data', 'factor_proporcionalidad')
+    op.drop_column('form_104_data', 'iva_no_considerado_credito')
+    op.drop_column('form_104_data', 'ajuste_positivo_credito')
+    op.drop_column('form_104_data', 'ajuste_negativo_credito')
+    
+    # EXPORTACIONES
+    op.drop_column('form_104_data', 'importaciones_materias_primas_valor')
+    op.drop_column('form_104_data', 'importaciones_materias_primas_isd_pagado')
+    op.drop_column('form_104_data', 'proporcion_ingreso_neto_divisas')
+    
+    # TOTALS
+    op.drop_column('form_104_data', 'compensacion_iva_medio_electronico')
+    op.drop_column('form_104_data', 'saldo_credito_anterior_adquisiciones')
+    op.drop_column('form_104_data', 'saldo_credito_anterior_retenciones')
+    op.drop_column('form_104_data', 'saldo_credito_anterior_compensacion_electronico')
+    op.drop_column('form_104_data', 'saldo_credito_anterior_zonas_afectadas')
+    op.drop_column('form_104_data', 'iva_devuelto_adultos_mayores')
+    op.drop_column('form_104_data', 'ajuste_iva_devuelto_electronico')
+    op.drop_column('form_104_data', 'ajuste_iva_devuelto_adquisiciones')
+    op.drop_column('form_104_data', 'ajuste_iva_devuelto_retenciones')
+    op.drop_column('form_104_data', 'ajuste_iva_otras_instituciones')
+    op.drop_column('form_104_data', 'saldo_credito_proximo_adquisiciones')
+    op.drop_column('form_104_data', 'saldo_credito_proximo_retenciones')
+    op.drop_column('form_104_data', 'saldo_credito_proximo_compensacion_electronico')
+    op.drop_column('form_104_data', 'saldo_credito_proximo_zonas_afectadas')
+    op.drop_column('form_104_data', 'iva_pagado_no_compensado')
+    op.drop_column('form_104_data', 'ajuste_credito_superior_5_anos')
+    op.drop_column('form_104_data', 'ajuste_reduccion_impuesto_tarifa_5')
+    op.drop_column('form_104_data', 'ajuste_reduccion_impuesto_iva_diferencial')
+    op.drop_column('form_104_data', 'ajuste_credito_compensacion_zonas_afectadas')
+    op.drop_column('form_104_data', 'saldo_credito_anterior_iva_medio_electronico')
+    op.drop_column('form_104_data', 'saldo_credito_proximo_iva_electronico')
+    op.drop_column('form_104_data', 'total_impuesto_pagar_percepcion')
+    op.drop_column('form_104_data', 'total_impuesto_a_pagar')
+    op.drop_column('form_104_data', 'interes_mora')
+    op.drop_column('form_104_data', 'multa')
+    
+    print("✅ Removed all 127 fields from form_104_data table")
