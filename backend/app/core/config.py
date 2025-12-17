@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: str = ".pdf"
     
     # CORS Configuration
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001"]
+    CORS_ORIGINS: List[str] = ["https://tax.capbraco.com", "https://api.capbraco.com"]
     
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     PRODUCTION: bool = False
     
     # ✅ Frontend URL (for password reset emails and OAuth redirects)
-    FRONTEND_URL: str = "http://localhost:3000"
+    FRONTEND_URL: str = "https://tax.capbraco.com"
     
     class Config:
         env_file = ".env"

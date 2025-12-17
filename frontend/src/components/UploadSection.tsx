@@ -37,9 +37,10 @@ export default function UploadSection({ onUploadSuccess }: UploadSectionProps) {
   const fetchGuestInfo = useCallback(async () => {
     if (!isAuthenticated) {
       try {
-        const response = await fetch('http://localhost:8000/api/upload/guest/info', {
-          credentials: 'include'
-        })
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload/guest/info`, {
+            credentials: 'include'
+          })
+
         if (response.ok) {
           const data = await response.json()
           setGuestInfo({

@@ -126,7 +126,7 @@ export default function RegisterPage() {
 
   const handleGoogleRegister = () => {
     // Google OAuth - same endpoint as login, will create account if doesn't exist
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL
     window.location.href = `${apiUrl}/api/auth/google/login`
   }
 
