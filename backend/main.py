@@ -73,6 +73,7 @@ app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY, same_site=
 
 allowed_origins = [
     "https://tax.capbraco.com",
+    "https://api.capbraco.com",
     "https://www.tax.capbraco.com",
 
     #local dev
