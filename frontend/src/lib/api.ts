@@ -1,7 +1,10 @@
 import axios from 'axios'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+if (!process.env.NEXT_PUBLIC_API_URL) {
+  throw new Error('NEXT_PUBLIC_API_URL is not defined')
+}
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
@@ -52,22 +55,24 @@ export const uploadMultiplePDFs = async (files: File[]) => {
 
 export const uploadMultiplePDFsWithFetch = async (files: File[]) => {
   const formData = new FormData()
-  files.forEach(file => {
-    formData.append('files', file)
-  })
-  
-  const response = await fetch('http://localhost:8000/api/upload/bulk', {
-    method: 'POST',
-    body: formData,
-    credentials: 'include',  // ✅ This is equivalent to withCredentials
-  })
-  
+  files.forEach(file => formData.append('files', file))
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/upload/bulk`,
+    {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    }
+  )
+
   if (!response.ok) {
     throw new Error(`Upload failed: ${response.status}`)
   }
-  
+
   return response.json()
 }
+
 
 export const getUploadStatus = async (documentId: number) => {
   const response = await api.get(`/api/upload/status/${documentId}`)
