@@ -471,9 +471,9 @@ export default function YearlySummary({ razonSocial, year }: YearlySummaryProps)
         </div>
 
         {/* Additional Fields Section */}
-        {(summaryData.form_104_summary.interes_mora > 0 || 
-          summaryData.form_104_summary.multa > 0 || 
-          summaryData.form_104_summary.total_impuesto_a_pagar) && (
+        {(summaryData.form_104_summary.total_impuesto_a_pagar !== undefined ||
+          summaryData.form_104_summary.interes_mora !== undefined ||
+          summaryData.form_104_summary.multa !== undefined) && (
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">INFORMACIÓN ADICIONAL</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -506,7 +506,7 @@ export default function YearlySummary({ razonSocial, year }: YearlySummaryProps)
             </div>
           </div>
         )}
-      </div>
+      </div>i
     </div>
   )
 }

@@ -4,6 +4,7 @@ Clientes API Endpoints - Phase 3: User Data Isolation
 ✅ Complete Excel/PDF export with proper styling
 ✅ Works with NULL periodo_anio documents
 ✅ Year validation
+✅ FIXED: Only use Form 104 fields that actually exist in the database
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -40,7 +41,7 @@ MONTH_MAP = {
     "OCTUBRE": 10, "NOVIEMBRE": 11, "DICIEMBRE": 12
 }
 
-# Pydantic models (unchanged)
+# Pydantic models
 class ClientSummary(BaseModel):
     razon_social: str
     document_count: int
@@ -86,7 +87,7 @@ def is_valid_year(year: str) -> bool:
 
 
 # ------------------------------
-# List all clients (unchanged)
+# List all clients
 # ------------------------------
 @router.get("/", response_model=List[ClientSummary])
 async def get_all_clients(
@@ -120,7 +121,7 @@ async def get_all_clients(
 
 
 # ------------------------------
-# Documents grouped by year/month (unchanged)
+# Documents grouped by year/month
 # ------------------------------
 @router.get("/{razon_social}")
 async def get_client_documents(
@@ -195,7 +196,7 @@ async def get_client_documents(
 
 
 # ------------------------------
-# Yearly summary (FIXED)
+# Yearly summary - ✅ FIXED with getattr()
 # ------------------------------
 @router.get("/{razon_social}/yearly-summary/{year}")
 async def get_yearly_summary(
@@ -246,17 +247,30 @@ async def get_yearly_summary(
         'monthly_details': []
     }
     
+    # ✅ FIXED: Include ALL Form 104 fields that ACTUALLY exist in the database
     summary_104 = {
+        # Basic fields
         'total_ventas_neto': 0.0,
         'total_impuesto_generado': 0.0,
         'total_adquisiciones': 0.0,
         'credito_tributario_aplicable': 0.0,
         'total_impuesto_retenido': 0.0,
         'total_pagado': 0.0,
+        
+        # Calculated fields that EXIST in database
+        'impuesto_causado': 0.0,
+        'retenciones_efectuadas': 0.0,
+        'subtotal_a_pagar': 0.0,
+        'total_impuesto_pagar_retencion': 0.0,
+        'total_consolidado_iva': 0.0,
+        'total_impuesto_a_pagar': 0.0,
+        'interes_mora': 0.0,
+        'multa': 0.0,
+        
         'monthly_details': []
     }
 
-    # --- Form 103 processing (Unchanged) ---
+    # --- Form 103 processing ---
     for doc in docs_103:
         tot = (await db.execute(select(Form103Totals).where(Form103Totals.document_id == doc.id))).scalar_one_or_none()
         if not tot:
@@ -274,35 +288,41 @@ async def get_yearly_summary(
             summary_103[k] += md[k]
         summary_103['monthly_details'].append(md)
 
-    # --- Form 104 processing (FIXED HERE) ---
+    # --- Form 104 processing - ✅ FIXED with getattr() for safety ---
     for doc in docs_104:
         data = (await db.execute(select(Form104Data).where(Form104Data.document_id == doc.id))).scalar_one_or_none()
         
-        # ✅ FIX: If Form104Data is missing, use a placeholder object with zero values
         if not data:
-            data = type('Form104DataPlaceholder', (object,), {
-                'total_ventas_neto': 0.0,
-                'total_impuesto_generado': 0.0,
-                'total_adquisiciones': 0.0,
-                'credito_tributario_aplicable': 0.0,
-                'total_impuesto_retenido': 0.0,
-                'total_pagado': 0.0
-            })()
+            continue
             
         periodo_fiscal = f"{doc.periodo_mes} {doc.periodo_anio}" if doc.periodo_mes else None
+        
+        # ✅ Use getattr() with 0 default - safe for all fields
         md = {
             'month': doc.periodo_mes_numero,
             'periodo_fiscal': periodo_fiscal,
-            'total_ventas_neto': data.total_ventas_neto or 0.0,
-            'total_impuesto_generado': data.total_impuesto_generado or 0.0,
-            'total_adquisiciones': data.total_adquisiciones or 0.0,
-            'credito_tributario_aplicable': data.credito_tributario_aplicable or 0.0,
-            'total_impuesto_retenido': data.total_impuesto_retenido or 0.0,
-            'total_pagado': data.total_pagado or 0.0
+            'total_ventas_neto': getattr(data, 'total_ventas_neto', 0) or 0.0,
+            'total_impuesto_generado': getattr(data, 'total_impuesto_generado', 0) or 0.0,
+            'total_adquisiciones': getattr(data, 'total_adquisiciones', 0) or 0.0,
+            'credito_tributario_aplicable': getattr(data, 'credito_tributario_aplicable', 0) or 0.0,
+            'total_impuesto_retenido': getattr(data, 'total_impuesto_retenido', 0) or 0.0,
+            'total_pagado': getattr(data, 'total_pagado', 0) or 0.0,
+            # Add calculated fields with getattr for safety
+            'impuesto_causado': getattr(data, 'impuesto_causado', 0) or 0.0,
+            'retenciones_efectuadas': getattr(data, 'retenciones_efectuadas', 0) or 0.0,
+            'subtotal_a_pagar': getattr(data, 'subtotal_a_pagar', 0) or 0.0,
+            'total_impuesto_pagar_retencion': getattr(data, 'total_impuesto_pagar_retencion', 0) or 0.0,
+            'total_consolidado_iva': getattr(data, 'total_consolidado_iva', 0) or 0.0,
+            'total_impuesto_a_pagar': getattr(data, 'total_impuesto_a_pagar', 0) or 0.0,
+            'interes_mora': getattr(data, 'interes_mora', 0) or 0.0,
+            'multa': getattr(data, 'multa', 0) or 0.0,
         }
-        for k in ['total_ventas_neto', 'total_impuesto_generado', 'total_adquisiciones', 
-                  'credito_tributario_aplicable', 'total_impuesto_retenido', 'total_pagado']:
-            summary_104[k] += md[k]
+        
+        # Sum all fields into summary
+        for key, value in md.items():
+            if key not in ['month', 'periodo_fiscal']:
+                summary_104[key] += value
+        
         summary_104['monthly_details'].append(md)
 
     all_months = set(range(1, 13))
@@ -322,7 +342,7 @@ async def get_yearly_summary(
 
 
 # ------------------------------
-# Validation (unchanged)
+# Validation
 # ------------------------------
 @router.get("/{razon_social}/validation/{year}")
 async def validate_year_completeness(
@@ -331,7 +351,6 @@ async def validate_year_completeness(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-# ... (Validation function is unchanged as it only checks for the existence of the Document, not the data)
     if not is_valid_year(year):
         raise HTTPException(
             status_code=400,
@@ -389,7 +408,7 @@ async def validate_year_completeness(
 
 
 # ------------------------------
-# Export to Excel (FIXED)
+# Export to Excel
 # ------------------------------
 @router.post("/{razon_social}/export-excel/{year}")
 async def export_yearly_excel(
@@ -438,12 +457,9 @@ async def export_yearly_excel(
         query_104 = query_104.where(Document.periodo_mes_numero.notin_(excluded))
     docs_104 = (await db.execute(query_104)).scalars().all()
 
-    # Create workbook (unchanged)
-# ... (Excel workbook setup code)
     wb = openpyxl.Workbook()
     
-    # Styling (unchanged)
-# ... (Styling variables)
+    # Styling
     header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True, size=11)
     total_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
@@ -457,8 +473,7 @@ async def export_yearly_excel(
     month_names = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
     
-    # --- Form 103 Sheet --- (Processing logic unchanged)
-# ... (Form 103 logic)
+    # --- Form 103 Sheet ---
     ws_103 = wb.active
     ws_103.title = "Form 103 - Retenciones"
     
@@ -516,8 +531,7 @@ async def export_yearly_excel(
         
         row_num += 1
     
-    # Total row (unchanged)
-# ... (Total row logic)
+    # Total row
     ws_103.cell(row=row_num, column=1).value = "TOTAL ANUAL"
     ws_103.cell(row=row_num, column=1).font = Font(bold=True, size=11)
     ws_103.cell(row=row_num, column=3).value = total_subtotal
@@ -534,8 +548,7 @@ async def export_yearly_excel(
             cell.number_format = '$#,##0.00'
             cell.alignment = Alignment(horizontal='right')
     
-    # Column widths (unchanged)
-# ... (Column widths)
+    # Column widths
     ws_103.column_dimensions['A'].width = 12
     ws_103.column_dimensions['B'].width = 15
     ws_103.column_dimensions['C'].width = 18
@@ -543,11 +556,10 @@ async def export_yearly_excel(
     ws_103.column_dimensions['E'].width = 18
     ws_103.column_dimensions['F'].width = 18
     
-    # --- Form 104 Sheet (FIXED HERE) ---
+    # --- Form 104 Sheet ---
     ws_104 = wb.create_sheet("Form 104 - IVA")
     
-    # Title (unchanged)
-# ... (Title setup)
+    # Title
     ws_104['A1'] = f"Resumen Anual {year} - Form 104 (IVA)"
     ws_104['A1'].font = Font(size=14, bold=True)
     ws_104['A2'] = razon_social
@@ -555,11 +567,11 @@ async def export_yearly_excel(
     ws_104['A3'] = f"Usuario: {current_user.email}"
     ws_104['A3'].font = Font(size=9, italic=True)
     
-    # Monthly detail section (unchanged)
+    # Monthly detail section
     ws_104['A5'] = "DETALLE MENSUAL"
     ws_104['A5'].font = Font(size=12, bold=True)
     
-    # Headers (unchanged)
+    # Headers
     headers_104 = ['Mes', 'Período', 'Ventas Neto', 'Imp. Generado', 'Adquisiciones', 'Créd. Trib.', 'Imp. Retenido', 'Total Pagado']
     for col_num, header in enumerate(headers_104, 1):
         cell = ws_104.cell(row=6, column=col_num)
@@ -581,27 +593,21 @@ async def export_yearly_excel(
     for doc in docs_104:
         data = (await db.execute(select(Form104Data).where(Form104Data.document_id == doc.id))).scalar_one_or_none()
         
-        # ✅ FIX: If data is missing, use a placeholder
         if not data:
-            data = type('Form104DataPlaceholder', (object,), {
-                'total_ventas_neto': 0.0, 'total_impuesto_generado': 0.0,
-                'total_adquisiciones': 0.0, 'credito_tributario_aplicable': 0.0,
-                'total_impuesto_retenido': 0.0, 'total_pagado': 0.0
-            })()
+            continue
         
         periodo_fiscal = f"{doc.periodo_mes} {doc.periodo_anio}" if doc.periodo_mes else "N/A"
         
         ws_104.cell(row=row_num, column=1).value = month_names[doc.periodo_mes_numero] if doc.periodo_mes_numero else "N/A"
         ws_104.cell(row=row_num, column=2).value = periodo_fiscal
-        ws_104.cell(row=row_num, column=3).value = data.total_ventas_neto or 0.0
-        ws_104.cell(row=row_num, column=4).value = data.total_impuesto_generado or 0.0
-        ws_104.cell(row=row_num, column=5).value = data.total_adquisiciones or 0.0
-        ws_104.cell(row=row_num, column=6).value = data.credito_tributario_aplicable or 0.0
-        ws_104.cell(row=row_num, column=7).value = data.total_impuesto_retenido or 0.0
-        ws_104.cell(row=row_num, column=8).value = data.total_pagado or 0.0
+        ws_104.cell(row=row_num, column=3).value = getattr(data, 'total_ventas_neto', 0) or 0.0
+        ws_104.cell(row=row_num, column=4).value = getattr(data, 'total_impuesto_generado', 0) or 0.0
+        ws_104.cell(row=row_num, column=5).value = getattr(data, 'total_adquisiciones', 0) or 0.0
+        ws_104.cell(row=row_num, column=6).value = getattr(data, 'credito_tributario_aplicable', 0) or 0.0
+        ws_104.cell(row=row_num, column=7).value = getattr(data, 'total_impuesto_retenido', 0) or 0.0
+        ws_104.cell(row=row_num, column=8).value = getattr(data, 'total_pagado', 0) or 0.0
         
-        # Format and borders (unchanged)
-# ... (Formatting logic)
+        # Format and borders
         for col in range(1, 9):
             cell = ws_104.cell(row=row_num, column=col)
             cell.border = border
@@ -609,17 +615,16 @@ async def export_yearly_excel(
                 cell.number_format = '$#,##0.00'
                 cell.alignment = Alignment(horizontal='right')
         
-        total_ventas += data.total_ventas_neto or 0.0
-        total_impuesto_gen += data.total_impuesto_generado or 0.0
-        total_adq += data.total_adquisiciones or 0.0
-        total_cred += data.credito_tributario_aplicable or 0.0
-        total_ret += data.total_impuesto_retenido or 0.0
-        total_pag += data.total_pagado or 0.0
+        total_ventas += getattr(data, 'total_ventas_neto', 0) or 0.0
+        total_impuesto_gen += getattr(data, 'total_impuesto_generado', 0) or 0.0
+        total_adq += getattr(data, 'total_adquisiciones', 0) or 0.0
+        total_cred += getattr(data, 'credito_tributario_aplicable', 0) or 0.0
+        total_ret += getattr(data, 'total_impuesto_retenido', 0) or 0.0
+        total_pag += getattr(data, 'total_pagado', 0) or 0.0
         
         row_num += 1
     
-    # Total row (unchanged)
-# ... (Total row logic)
+    # Total row
     ws_104.cell(row=row_num, column=1).value = "TOTAL ANUAL"
     ws_104.cell(row=row_num, column=1).font = Font(bold=True, size=11)
     ws_104.cell(row=row_num, column=3).value = total_ventas
@@ -638,8 +643,7 @@ async def export_yearly_excel(
             cell.number_format = '$#,##0.00'
             cell.alignment = Alignment(horizontal='right')
     
-    # Summary section (unchanged)
-# ... (Summary section logic)
+    # Summary section
     row_num += 3
     ws_104.cell(row=row_num, column=1).value = "RESUMEN ANUAL"
     ws_104.cell(row=row_num, column=1).font = Font(size=12, bold=True)
@@ -671,15 +675,13 @@ async def export_yearly_excel(
         
         row_num += 1
     
-    # Column widths (unchanged)
-# ... (Column widths)
+    # Column widths
     ws_104.column_dimensions['A'].width = 12
     ws_104.column_dimensions['B'].width = 15
     for col in ['C', 'D', 'E', 'F', 'G', 'H']:
         ws_104.column_dimensions[col].width = 15
     
-    # Save to bytes (unchanged)
-# ... (Save to bytes and return response)
+    # Save to bytes
     output = BytesIO()
     wb.save(output)
     output.seek(0)
@@ -695,7 +697,7 @@ async def export_yearly_excel(
 
 
 # ------------------------------
-# Export to PDF (Fixed and Ready)
+# Export to PDF
 # ------------------------------
 @router.post("/{razon_social}/export-pdf/{year}")
 async def export_yearly_pdf(
@@ -846,26 +848,27 @@ async def export_yearly_pdf(
     for doc in docs_104:
         data = (await db.execute(select(Form104Data).where(Form104Data.document_id == doc.id))).scalar_one_or_none()
         if not data:
-            data = type('Form104DataPlaceholder', (object,), {
-                'total_ventas_neto': 0.0,
-                'total_impuesto_generado': 0.0,
-                'total_adquisiciones': 0.0,
-                'credito_tributario_aplicable': 0.0,
-                'total_pagado': 0.0
-            })()
+            continue
+        
+        ventas = getattr(data, 'total_ventas_neto', 0) or 0
+        imp_gen = getattr(data, 'total_impuesto_generado', 0) or 0
+        adq = getattr(data, 'total_adquisiciones', 0) or 0
+        cred = getattr(data, 'credito_tributario_aplicable', 0) or 0
+        pag = getattr(data, 'total_pagado', 0) or 0
+        
         table_data_104.append([
             month_names[doc.periodo_mes_numero] if doc.periodo_mes_numero else "N/A",
-            f"${data.total_ventas_neto:,.2f}",
-            f"${data.total_impuesto_generado:,.2f}",
-            f"${data.total_adquisiciones:,.2f}",
-            f"${data.credito_tributario_aplicable:,.2f}",
-            f"${data.total_pagado:,.2f}"
+            f"${ventas:,.2f}",
+            f"${imp_gen:,.2f}",
+            f"${adq:,.2f}",
+            f"${cred:,.2f}",
+            f"${pag:,.2f}"
         ])
-        total_ventas += data.total_ventas_neto
-        total_imp_gen += data.total_impuesto_generado
-        total_adq += data.total_adquisiciones
-        total_cred += data.credito_tributario_aplicable
-        total_pag_104 += data.total_pagado
+        total_ventas += ventas
+        total_imp_gen += imp_gen
+        total_adq += adq
+        total_cred += cred
+        total_pag_104 += pag
 
     # Total row
     table_data_104.append([
@@ -892,7 +895,7 @@ async def export_yearly_pdf(
     elements.append(table_104)
     elements.append(Spacer(1, 0.4*inch))
 
-    # ✅ Build the PDF
+    # Build the PDF
     pdf_doc.build(elements)
     output.seek(0)
 

@@ -129,12 +129,35 @@ export interface Form104MonthlyDetail {
 
 // Form 104 Summary
 export interface Form104Summary {
-  total_ventas_neto: number
-  total_impuesto_generado: number
-  total_adquisiciones: number
-  credito_tributario_aplicable: number
-  total_impuesto_retenido: number
-  total_pagado: number
+  ventas_tarifa_diferente_cero_bruto?: number;
+  ventas_tarifa_diferente_cero_neto?: number;
+  impuesto_generado?: number;
+  total_ventas_bruto?: number;
+  total_ventas_neto?: number;
+  total_impuesto_generado?: number;
+  
+  // Purchases
+  adquisiciones_tarifa_diferente_cero_bruto?: number;
+  adquisiciones_tarifa_diferente_cero_neto?: number;
+  impuesto_compras?: number;
+  adquisiciones_tarifa_cero?: number;
+  total_adquisiciones?: number;
+  
+  // Tax calculations
+  credito_tributario_aplicable?: number;
+  impuesto_causado?: number;
+  retenciones_efectuadas?: number;
+  subtotal_a_pagar?: number;
+  total_impuesto_retenido?: number;
+  total_impuesto_pagar_retencion?: number;
+  total_impuesto_pagar_percepcion?: number;
+  total_consolidado_iva?: number;
+  total_impuesto_a_pagar?: number;
+  
+  // Final totals
+  total_pagado?: number;
+  interes_mora?: number;
+  multa?: number;
   monthly_details: Form104MonthlyDetail[]
 }
 
