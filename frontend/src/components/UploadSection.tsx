@@ -420,7 +420,7 @@ export default function UploadSection({ onUploadSuccess }: UploadSectionProps) {
           }
         `}
       >
-        <input {...getInputProps()} disabled={isLimitReached} />
+        <input {...getInputProps()} disabled={isLimitReached ?? false} />
         <div className="flex flex-col items-center space-y-4">
           <div className={`
             p-4 rounded-full
