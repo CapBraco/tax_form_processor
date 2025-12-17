@@ -1,6 +1,8 @@
 """
 Enhanced PDF Form Processor - Main Application
 ✅ FINAL VERSION: All routers registered correctly
+✅ FIXED: Proper CORS configuration with environment variables
+✅ FIXED: Session middleware with correct settings
 """
 
 from fastapi import FastAPI, Request
@@ -10,6 +12,7 @@ import time
 from contextlib import asynccontextmanager
 import logging
 import os
+import json
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
@@ -26,7 +29,7 @@ from app.api import (
     form_103, 
     form_104,
     forms_data,
-    admin  # ✅ MUST IMPORT THIS
+    admin
 )
 
 # Configure logging
@@ -67,21 +70,64 @@ app = FastAPI(
 )
 
 # ===================================
-# Middleware - MUST BE FIRST
+# Middleware Configuration
 # ===================================
-app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY, same_site='none', https_only=True,)
 
+# Session Middleware - MUST BE FIRST
+# ✅ FIXED: Proper session settings for production
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY,
+    same_site='lax',  # Changed from 'none' - better compatibility
+    https_only=True,  # Enforce HTTPS in production
+    max_age=1209600,  # 14 days
+    session_cookie='session'
+)
+logger.info("✅ Session middleware configured")
+
+# ===================================
+# CORS Configuration - READS FROM ENVIRONMENT
+# ===================================
+
+# Read from environment variables
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
+
+logger.info(f"📝 Environment variables loaded:")
+logger.info(f"   FRONTEND_URL: {FRONTEND_URL}")
+logger.info(f"   BACKEND_URL: {BACKEND_URL}")
+
+# Try to read CORS_ORIGINS from environment (Railway variable)
+# Expected format: ["https://example.com","https://www.example.com"]
+cors_origins_str = os.getenv("CORS_ORIGINS")
+extra_origins = []
+
+if cors_origins_str:
+    try:
+        # Parse JSON array from environment variable
+        extra_origins = json.loads(cors_origins_str)
+        logger.info(f"   CORS_ORIGINS parsed: {extra_origins}")
+    except json.JSONDecodeError as e:
+        logger.warning(f"⚠️  Failed to parse CORS_ORIGINS: {e}")
+        extra_origins = []
+
+# Build comprehensive allowed origins list
 allowed_origins = [
-    "https://tax.capbraco.com",
-    "https://api.capbraco.com",
-    "https://www.tax.capbraco.com",
-
-    #local dev
+    FRONTEND_URL,
+    BACKEND_URL,
+    # Add any extra origins from CORS_ORIGINS variable
+    *extra_origins,
+    # Local development fallbacks
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
+# Remove duplicates and None/empty values
+allowed_origins = list(set([origin for origin in allowed_origins if origin and origin.strip()]))
+
+# Add CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -92,9 +138,12 @@ app.add_middleware(
     max_age=3600,
 )
 
-logger.info(f"🌐 CORS configured for origins: {allowed_origins}")
+logger.info(f"🌐 CORS configured for {len(allowed_origins)} origins:")
+for origin in allowed_origins:
+    logger.info(f"   ✓ {origin}")
 
 
+# Process time middleware
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     start_time = time.time()
@@ -105,15 +154,21 @@ async def add_process_time_header(request: Request, call_next):
 
 
 # ===================================
-# Root & Health
+# Root & Health Endpoints
 # ===================================
+
 @app.get("/")
 async def root():
     return {
         "message": "Enhanced PDF Form Processor API",
         "version": "2.0.0",
         "status": "online",
-        "docs": "/docs"
+        "docs": "/docs",
+        "environment": {
+            "frontend_url": FRONTEND_URL,
+            "backend_url": BACKEND_URL,
+            "cors_origins_count": len(allowed_origins)
+        }
     }
 
 
@@ -132,7 +187,9 @@ async def health_check():
     return {
         "status": "healthy" if db_status == "connected" else "degraded",
         "database": db_status,
-        "version": "2.0.0"
+        "version": "2.0.0",
+        "cors_enabled": True,
+        "allowed_origins_count": len(allowed_origins)
     }
 
 
@@ -164,13 +221,16 @@ app.include_router(form_104.router, prefix="/api", tags=["Form 104"])
 # Forms Data
 app.include_router(forms_data.router, prefix="/api/forms-data", tags=["Forms Data"])
 
-# ✅ Admin (YOUR EXISTING admin.py)
+# Admin
 app.include_router(admin.router, prefix="/api", tags=["Admin"])
 
+logger.info("✅ All API routers registered successfully")
+
 
 # ===================================
-# Exception Handler
+# Global Exception Handler
 # ===================================
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
@@ -182,6 +242,10 @@ async def global_exception_handler(request: Request, exc: Exception):
         }
     )
 
+
+# ===================================
+# Development Server
+# ===================================
 
 if __name__ == "__main__":
     import uvicorn
