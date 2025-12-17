@@ -139,7 +139,7 @@ export default function Home() {
         <div className="p-6 pt-16 lg:pt-6">
           <Dashboard
             activeSection={activeSection}
-            onNavigate={handleSectionChange}
+            onNavigate={setActiveSection}
             selectedClient={selectedClient}
             onClientSelect={handleClientSelect}
             onDocumentsUploaded={handleDocumentsUploaded}
