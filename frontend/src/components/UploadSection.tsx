@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 
 interface UploadSectionProps {
-  onUploadSuccess: () => void
+  onUploadSuccess?: () => void
 }
 
 interface UploadedFile {
@@ -128,7 +128,7 @@ export default function UploadSection({ onUploadSuccess }: UploadSectionProps) {
         )
         
         if (!result.is_duplicate) {
-          onUploadSuccess()
+          onUploadSuccess?.()
           // ✅ Refresh guest info after successful upload
           await fetchGuestInfo()
         }
@@ -167,7 +167,7 @@ export default function UploadSection({ onUploadSuccess }: UploadSectionProps) {
         // Only trigger refresh if there were new (non-duplicate) uploads
         const newUploads = result.uploaded?.filter((u: any) => !u.is_duplicate) || []
         if (newUploads.length > 0) {
-          onUploadSuccess()
+          onUploadSuccess?.()
         }
 
         // ✅ Update guest info after bulk upload
