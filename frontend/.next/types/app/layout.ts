@@ -1,4 +1,4 @@
-// File: C:\Users\BRACO\Documents\enhance\enhance\frontend\src\app\layout.tsx
+// File: /Users/braco/Projects/tax_form_processor/frontend/src/app/layout.tsx
 import * as entry from '../../../src/app/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
