@@ -1,16 +1,32 @@
-node_modules/
-.env
-*.env
-.env.*
-.env.production
-.DS_Store
-*.log
-.env.local
-venv/
-node_modules/
+# Python
 __pycache__/
-.next/
-uploads/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.env
+.env.production
+
+# Backend uploads
+backend/uploads/
+*.pdf
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
-.next/
+Thumbs.db
+
+# Logs
+*.log
