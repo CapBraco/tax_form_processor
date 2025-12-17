@@ -69,9 +69,12 @@ app = FastAPI(
 # ===================================
 # Middleware - MUST BE FIRST
 # ===================================
-app.add_middleware(SessionMiddleware, secret_key="wJ9vF6qL2Zs8XhK4bQp1nRm3GtYxVcDa")
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY, same_site='none', https_only=True,)
 
 allowed_origins = [
+    "https://tax.capbraco.com",
+
+    #local dev
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:8000",
