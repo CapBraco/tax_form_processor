@@ -234,7 +234,7 @@ function DashboardHome({ stats, onNavigate, isAuthenticated }: DashboardHomeProp
     <div className="space-y-4 max-w-7xl mx-auto">
       {/* Welcome Section - Compact */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 rounded-lg shadow-lg p-4 text-white">
-        <h1 className="text-2xl font-bold mb-1">Tax Forms Dashboard</h1>
+        <h1 className="text-2xl font-bold mb-1">Pan Tributario Dashboard</h1>
         <p className="text-sm text-blue-100">
           Gestiona y procesa tus formularios 103 y 104{!isAuthenticated && ' • Modo Invitado'}
         </p>
