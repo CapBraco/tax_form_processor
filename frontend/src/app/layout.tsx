@@ -10,14 +10,14 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    default: "Tax Forms Processor - Gestión de Formularios 103 & 104",
-    template: "%s | Tax Forms Processor"
+    default: "Pan Tributario - Gestión de Formularios 103 & 104",
+    template: "%s | Pan Tributario"
   },
   description: "Sistema profesional de procesamiento y análisis de formularios tributarios 103 (Retenciones) y 104 (IVA) de Ecuador. Organiza tus declaraciones fiscales por cliente y período con resúmenes anuales automáticos.",
   keywords: [
     "formularios tributarios Ecuador",
-    "Form 103",
-    "Form 104",
+    "Forma 103",
+    "Forma 104",
     "SRI Ecuador",
     "declaraciones fiscales",
     "retenciones en la fuente",
@@ -25,10 +25,12 @@ export const metadata: Metadata = {
     "gestión tributaria",
     "contabilidad Ecuador",
     "procesamiento de formularios",
+    "contabilidad Quito",
+    "contadores Ecuador"
   ],
-  authors: [{ name: "CapBraco || Lutweb", url: "https://capbraco.com" }],
-  creator: "CapBraco",
-  publisher: "Lutweb",
+  authors: [{ name: "Braco || Capbraco.com", url: "https://capbraco.com" }],
+  creator: "Braco",
+  publisher: "Capbraco",
   formatDetection: {
     email: false,
     address: false,
@@ -42,21 +44,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "es_EC",
     url: "https://tax.capbraco.com",
-    siteName: "Tax Forms Processor",
-    title: "Tax Forms Processor - Gestión de Formularios Tributarios",
+    siteName: "Pan Tributario || Gestion Tributaria",
+    title: "Pan Tributario - Gestión de Formularios Tributarios",
     description: "Sistema profesional de procesamiento de formularios tributarios ecuatorianos 103 y 104",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Tax Forms Processor",
+        alt: "Pan Tributario",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tax Forms Processor",
+    title: "Pan Tributario",
     description: "Sistema profesional de gestión de formularios tributarios de Ecuador",
     images: ["/og-image.png"],
   },
