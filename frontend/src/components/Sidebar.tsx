@@ -51,7 +51,7 @@ export default function Sidebar({
     <aside className="w-64 bg-white dark:bg-gray-800 shadow-lg flex flex-col h-screen">
       {/* Logo/Header - Fixed */}
       <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Tax Forms</h2>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Pan Tributario</h2>
         <p className="text-sm text-gray-500 dark:text-gray-400">Form 103 & 104 Processor</p>
       </div>
 
@@ -243,8 +243,8 @@ export default function Sidebar({
         )}
         
         <div className="text-sm text-gray-500 dark:text-gray-400">
-          <p className="font-medium">Enhanced PDF Processor</p>
-          <p className="text-xs mt-1">v2.0.0 - With Form Parsing</p>
+          <p className="font-medium">Pan Tributario </p>
+          <p className="text-xs mt-1">v2.0.0 - Gestion Tributaria </p>
         </div>
         
         <ThemeToggle />
