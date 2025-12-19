@@ -278,10 +278,11 @@ function DashboardHome({ stats, onNavigate, isAuthenticated }: DashboardHomeProp
         {/* Forms Illustration - Centered & Smaller */}
         <div className="flex justify-center items-center my-4">
           <img 
-            src="/forms-illustration.png" 
+            src="/forms-illustration.webp" 
             alt="Form 103 y Form 104 - SRI Ecuador" 
             className="max-w-full h-auto rounded-lg shadow-xl"
             style={{ maxHeight: '280px' }}
+            fetchpriority="high"
           />
         </div>
 
