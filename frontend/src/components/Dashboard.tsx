@@ -282,7 +282,7 @@ function DashboardHome({ stats, onNavigate, isAuthenticated }: DashboardHomeProp
             alt="Form 103 y Form 104 - SRI Ecuador" 
             className="max-w-full h-auto rounded-lg shadow-xl"
             style={{ maxHeight: '280px' }}
-            fetchpriority="high"
+            fetchPriority="high"
           />
         </div>
 
