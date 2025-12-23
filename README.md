@@ -726,12 +726,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - React component lazy loading
 
 ---
-### **Media**
+### 📷 **Media**
 ![Dashboard](assets/1.png)
 ![Clients](assets/2.png)
 ![Forms View](assets/3.png)
 ![Yearly Summary](assets/4.png)
 
+---
 
 
 **Built with ❤️ by [CapBraco](https://www.capbraco.com)**
