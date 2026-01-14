@@ -353,13 +353,13 @@ POST   /api/clientes/export        # Export to Excel/PDF
 - [ ] Email notifications
 - [ ] Bulk document deletion
 
-### Q2 2025
+### Q2 2026
 - [ ] Mobile app (React Native)
 - [ ] API for third-party integrations
 - [ ] Advanced analytics dashboard
 - [ ] Scheduled reports (weekly/monthly)
 
-### Q3 2025
+### Q3 2026
 - [ ] Multi-language support (English)
 - [ ] WhatsApp notifications
 - [ ] Collaborative features (team accounts)
