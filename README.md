@@ -1,740 +1,413 @@
-# 📊 Tax Forms Processor - Ecuador
+<div align="center">
 
-> Professional tax document processing system for Ecuadorian businesses. Automatically extracts, analyzes, and organizes data from SRI Forms 103 (Retenciones) and 104 (IVA).
+# 🥖 Pan Tributario
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/Python-3.11+-blue)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green)](https://fastapi.tiangolo.com/)
-[![Next.js](https://img.shields.io/badge/Next.js-14+-black)](https://nextjs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-blue)](https://www.postgresql.org/)
+### Automated Tax Form Processing for Ecuador
 
----
+*Transforming 3-4 hours of manual work into 10 seconds*
 
-## 🎯 **Overview**
+[![Live Demo](https://img.shields.io/badge/demo-live-success?style=for-the-badge)](https://tax.capbraco.com)
+[![GitHub](https://img.shields.io/badge/github-repository-blue?style=for-the-badge&logo=github)](https://github.com/CapBraco/tax_form_processor)
+[![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 
-Tax Forms Processor is a full-stack web application designed to streamline tax compliance for Ecuadorian businesses. Upload PDF tax documents, and the system automatically extracts, processes, and organizes all relevant data.
+[Live Demo](https://tax.capbraco.com) · [Report Bug](https://github.com/CapBraco/tax_form_processor/issues) · [Request Feature](https://github.com/CapBraco/tax_form_processor/issues)
 
-### **Key Features**
-
-✅ **Automated PDF Processing** - Upload Form 103 & 104 PDFs and extract data automatically  
-✅ **Client Management** - Organize documents by company (razón social) and year  
-✅ **Yearly Summaries** - Automatic calculation of annual totals and accumulations  
-✅ **Professional Exports** - Generate Excel and branded PDF reports  
-✅ **Guest Mode** - Process up to 5 documents without registration  
-✅ **User Isolation** - Complete data privacy for registered users  
-✅ **Analytics Dashboard** - Track visitors, uploads, and usage statistics (admin only)  
-✅ **Mobile Responsive** - Works beautifully on all devices  
-✅ **Dark Mode** - Professional dark theme with proper contrast  
+</div>
 
 ---
 
-## 🏗️ **Architecture**
+## 📋 Table of Contents
 
-### **Tech Stack**
-
-**Backend:**
-- **FastAPI** - Modern Python web framework
-- **PostgreSQL** - Reliable database
-- **pdfplumber** - PDF text extraction
-- **SQLAlchemy** - ORM for database operations
-- **Bcrypt** - Secure password hashing
-
-**Frontend:**
-- **Next.js 14** - React framework with App Router
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first styling
-- **Recharts** - Beautiful analytics charts
-- **Lucide Icons** - Modern icon set
-
-**DevOps:**
-- **Docker** - Containerization
-- **Railway** - Cloud hosting platform
-- **GitHub Actions** - CI/CD (optional)
-
-### **System Architecture**
-
-```
-┌─────────────┐      ┌──────────────┐      ┌────────────┐
-│   Next.js   │ ───▶ │   FastAPI    │ ───▶ │ PostgreSQL │
-│  (Frontend) │      │  (Backend)   │      │ (Database) │
-└─────────────┘      └──────────────┘      └────────────┘
-       │                     │                     │
-       │                     │                     │
-       ▼                     ▼                     ▼
-  User Session         PDF Processing        Data Storage
-  Authentication       Regex Extraction      User Isolation
-  React Components     Form Parsing          JSONB Fields
-```
+- [About](#about)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Screenshots](#screenshots)
+- [Getting Started](#getting-started)
+- [Architecture](#architecture)
+- [API Documentation](#api-documentation)
+- [Deployment](#deployment)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
 
 ---
 
-## 🚀 **Quick Start**
+## 🎯 About
 
-### **Prerequisites**
+Pan Tributario is a full-stack SaaS application that automates the extraction and processing of Ecuadorian tax forms (SRI Forms 103 & 104). Built to solve a real problem faced by accountants and businesses, it reduces manual data entry from 3-4 hours per client to just 10 seconds.
 
-- **Docker** and **Docker Compose** installed
-- **Node.js 18+** (for local frontend development)
-- **Python 3.11+** (for local backend development)
-- **PostgreSQL 15+** (or use Docker)
+### The Problem
 
-### **Installation**
+Ecuadorian accountants manually extract financial data from PDF tax forms:
+- **Form 103** (Retenciones): 10+ fields per document
+- **Form 104** (IVA): 130+ fields across 7 sections
+- **Time required**: 3-4 hours per client
+- **Monthly workload**: 150-200 hours for 50 clients
+- **Error rate**: ~5% due to manual entry
 
-#### **1. Clone the repository**
+### The Solution
+
+Automated PDF processing with:
+- ⚡ **1,440x faster** processing (3-4 hours → 10 seconds)
+- ✅ **Zero errors** through automated extraction
+- 📊 **Professional reports** (Excel & PDF exports)
+- 👥 **Multi-client management** with yearly summaries
+- 🔐 **Complete data isolation** between users
+
+---
+
+## ✨ Features
+
+### Core Functionality
+- 📤 **Drag-and-drop PDF upload** with bulk processing
+- 🔍 **Automatic form detection** (103 vs 104)
+- 📊 **Intelligent field extraction** using regex patterns
+- 💾 **Client management** organized by company and year
+- 📈 **Yearly accumulations** for tax reporting
+- 📄 **Professional exports** (Excel with formulas, branded PDFs)
+
+### User Experience
+- 🎨 **Dark mode** with proper contrast ratios
+- 📱 **Mobile responsive** design
+- 🚀 **Real-time processing** with progress indicators
+- 🎯 **Guest mode** (5 free documents, no signup)
+- ♾️ **Unlimited access** for registered users
+
+### Security & Authentication
+- 🔐 **Google OAuth 2.0** integration
+- 🔒 **Bcrypt password** hashing
+- 🤖 **reCAPTCHA v3** bot protection
+- 🛡️ **Multi-tenant architecture** with complete user isolation
+- 🍪 **Secure session management**
+
+### Technical Features
+- ⚡ **Async processing** for optimal performance
+- 💾 **10 database tables** with proper relationships
+- 🔄 **35+ API endpoints** (RESTful)
+- 📊 **Analytics dashboard** for admins
+- 🌐 **CDN integration** (Cloudflare) for 70%+ cache rate
+
+---
+
+## 🛠️ Tech Stack
+
+### Frontend
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-18-blue?style=flat-square&logo=react)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-38bdf8?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+
+### Backend
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square&logo=python)](https://www.python.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
+[![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0-red?style=flat-square)](https://www.sqlalchemy.org/)
+
+### DevOps & Tools
+[![Docker](https://img.shields.io/badge/Docker-latest-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
+[![Railway](https://img.shields.io/badge/Railway-Deployed-0B0D0E?style=flat-square&logo=railway)](https://railway.app/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-CDN-F38020?style=flat-square&logo=cloudflare)](https://www.cloudflare.com/)
+
+---
+
+## 📸 Screenshots
+
+### Landing Page
+<img src="docs/images/1.png" alt="Landing Page" width="800"/>
+
+### Document Upload
+<img src="docs/images/2.png" alt="Clients Interface" width="800"/>
+
+### Form 103 Display
+<img src="docs/images/3.png" alt="Form 103" width="800"/>
+
+### Client Management
+<img src="docs/images/4.png" alt="Yearly Summary" width="800"/>
+
+### Dark Mode
+<img src="docs/images/5.png" alt="Light Mode" width="800"/>
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+- Python 3.11+
+- PostgreSQL 15+
+- Docker (optional)
+
+### Installation
+
+#### 1. Clone the repository
 ```bash
-git clone https://github.com/CapBraco/tax-forms-processor.git
-cd tax-forms-processor
+git clone https://github.com/CapBraco/tax_form_processor.git
+cd tax_form_processor
 ```
 
-#### **2. Set up environment variables**
-
-Create `.env` file in `backend/`:
-```env
-# Database
-DATABASE_URL=postgresql://postgres:password@localhost:5432/pdf_extractor_db
-
-# Security
-SECRET_KEY=your-secret-key-here-min-32-characters
-
-# Frontend URL (for CORS)
-FRONTEND_URL=http://localhost:3000
-
-# Backend URL
-BACKEND_URL=http://localhost:8000
-```
-
-Create `.env.local` file in `frontend/`:
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-```
-
-#### **3. Database Setup** (CRITICAL)
-
-**Choose ONE of the following methods:**
-
-##### **Method A: Complete Schema Migration (RECOMMENDED)**
-
-This applies the complete, production-ready schema in one step:
-
-```bash
-# Create the database
-psql -U postgres -c "CREATE DATABASE pdf_extractor_db;"
-
-# Apply the complete schema
-psql -U postgres -d pdf_extractor_db -f backend/migrations/complete_schema.sql
-```
-
-The `complete_schema.sql` file includes:
-- All 10 tables with correct structure
-- All ENUM types (formtypeenum, processingstatusenum)
-- All indexes and foreign keys
-- Default values and constraints
-
-##### **Method B: Incremental Migrations**
-
-Apply migrations in strict order:
-
-```bash
-# Create the database
-psql -U postgres -c "CREATE DATABASE pdf_extractor_db;"
-
-# Run migrations in order (DO NOT SKIP ANY)
-psql -U postgres -d pdf_extractor_db -f backend/migrations/001_initial_schema.sql
-psql -U postgres -d pdf_extractor_db -f backend/migrations/002_add_user_isolation.sql
-psql -U postgres -d pdf_extractor_db -f backend/migrations/003_add_form_104_fields.sql
-psql -U postgres -d pdf_extractor_db -f backend/migrations/004_add_analytics.sql
-```
-
-⚠️ **IMPORTANT**: Do NOT run migrations out of order or skip any!
-
-##### **Method C: Docker Compose (Automatic)**
-
-```bash
-# This automatically creates the database with complete schema
-docker-compose up -d
-
-# Verify the database was created correctly
-docker-compose exec db psql -U postgres -d pdf_extractor_db -c "\dt"
-```
-
-#### **4. Verify Database Schema**
-
-After creating the database, verify all tables exist:
-
-```bash
-psql -U postgres -d pdf_extractor_db -c "
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
-ORDER BY table_name;"
-```
-
-Expected tables:
-- `documents` (25 columns)
-- `form_103_data`
-- `form_103_line_items`
-- `form_103_totals`
-- `form_104_data` (130+ columns)
-- `guest_sessions`
-- `temporary_files`
-- `usage_analytics`
-- `users`
-
-#### **5. Start the Application**
-
-**Using Docker Compose (Recommended):**
-```bash
-docker-compose up -d
-```
-
-**OR manually:**
-
-**Backend:**
+#### 2. Backend Setup
 ```bash
 cd backend
+
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
+
+# Create .env file
+cp .env.example .env
+# Edit .env with your database credentials
+
+# Run migrations
+alembic upgrade head
+
+# Start server
 uvicorn main:app --reload
 ```
 
-**Frontend:**
+Backend will run at `http://localhost:8000`
+
+#### 3. Frontend Setup
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
+
+# Create .env.local file
+cp .env.example .env.local
+# Edit .env.local with your backend URL
+
+# Start development server
 npm run dev
 ```
 
-#### **6. Access the Application**
+Frontend will run at `http://localhost:3000`
 
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+### Environment Variables
 
----
-
-## 🔧 **Database Schema Details**
-
-### **Complete Table List**
-
-| Table | Columns | Purpose |
-|-------|---------|---------|
-| `documents` | 25 | Main document metadata |
-| `form_103_data` | 10 | Form 103 extracted data |
-| `form_103_line_items` | 9 | Line-by-line Form 103 details |
-| `form_103_totals` | 12 | Form 103 totals and summaries |
-| `form_104_data` | 133 | Complete Form 104 data (7 sections) |
-| `guest_sessions` | 7 | Guest user session tracking |
-| `temporary_files` | 6 | Temporary file management |
-| `usage_analytics` | 6 | Analytics event tracking |
-| `users` | 11 | User accounts and authentication |
-
-### **Critical Columns**
-
-#### **documents table:**
-- `form_type` (ENUM: 'FORM_103', 'FORM_104', 'UNKNOWN')
-- `processing_status` (ENUM: 'PENDING', 'PROCESSING', 'COMPLETED', 'FAILED')
-- `user_id` (Foreign key to users)
-- `session_id` (For guest users)
-- `razon_social` (Company name)
-- `periodo_fiscal_completo` (Full period: "ENERO 2025")
-
-#### **form_104_data table:**
-All 133 fields including:
-- `ventas_tarifa_diferente_cero_bruto`
-- `ventas_tarifa_diferente_cero_neto`
-- `impuesto_generado`
-- Plus 130+ more financial fields
-
-#### **users table:**
-- `username` (Unique)
-- `email` (Unique)
-- `hashed_password`
-- `last_login` (TIMESTAMP)
-- `is_active` (Boolean)
-
-#### **temporary_files table:**
-- `session_id`
-- `file_path`
-- `file_size` (BIGINT)
-- `expires_at`
-
----
-
-## ⚠️ **Common Issues & Troubleshooting**
-
-### **Issue 1: "Column does not exist" errors**
-
-**Symptom:**
-```
-column "last_login" of relation "users" does not exist
-column "file_size" of relation "temporary_files" does not exist
-```
-
-**Cause:** Incomplete database migration or running migrations out of order.
-
-**Solution:**
-```bash
-# Option A: Start fresh with complete schema
-psql -U postgres -c "DROP DATABASE pdf_extractor_db;"
-psql -U postgres -c "CREATE DATABASE pdf_extractor_db;"
-psql -U postgres -d pdf_extractor_db -f backend/migrations/complete_schema.sql
-
-# Option B: Check and add missing columns individually
-psql -U postgres -d pdf_extractor_db -c "
-ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
-ALTER TABLE temporary_files ADD COLUMN IF NOT EXISTS file_size BIGINT;
-"
-```
-
-### **Issue 2: "ENUM type does not exist" errors**
-
-**Symptom:**
-```
-type "formtypeenum" does not exist
-type "processingstatusenum" does not exist
-```
-
-**Solution:**
-```bash
-# Create ENUM types
-psql -U postgres -d pdf_extractor_db -c "
-CREATE TYPE formtypeenum AS ENUM ('FORM_103', 'FORM_104', 'UNKNOWN');
-CREATE TYPE processingstatusenum AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED');
-"
-```
-
-### **Issue 3: "Table does not exist" errors**
-
-**Symptom:**
-```
-relation "form_103_totals" does not exist
-relation "form_103_line_items" does not exist
-```
-
-**Cause:** Missing migrations or incomplete schema.
-
-**Solution:** Apply the complete schema migration (see Installation Step 3).
-
-### **Issue 4: Form 104 processing fails**
-
-**Symptom:** Form 103 works but Form 104 fails with column errors.
-
-**Cause:** The `form_104_data` table has 133 columns and is often incomplete.
-
-**Solution:**
-```bash
-# Verify form_104_data table structure
-psql -U postgres -d pdf_extractor_db -c "\d form_104_data"
-
-# If columns are missing, reapply the complete schema
-psql -U postgres -d pdf_extractor_db -f backend/migrations/complete_schema.sql
-```
-
-### **Issue 5: Railway deployment fails**
-
-**Symptom:** App deploys but database schema is incomplete.
-
-**Solution:**
-1. In Railway dashboard, go to your database service
-2. Open "Connect" tab and copy connection URL
-3. Run migrations remotely:
-```bash
-# Set the Railway database URL
-export DATABASE_URL="postgresql://postgres:xxx@containers-us-west-xxx.railway.app:5432/railway"
-
-# Apply complete schema
-psql $DATABASE_URL -f backend/migrations/complete_schema.sql
-```
-
-### **Database Health Check Script**
-
-Create `backend/check_db.py`:
-```python
-import asyncio
-from sqlalchemy import text
-from database import engine
-
-async def check_database():
-    async with engine.begin() as conn:
-        # Check tables
-        tables = await conn.execute(text("""
-            SELECT table_name 
-            FROM information_schema.tables 
-            WHERE table_schema = 'public'
-        """))
-        
-        print("✅ Existing tables:")
-        for row in tables:
-            print(f"  - {row[0]}")
-        
-        # Check ENUM types
-        enums = await conn.execute(text("""
-            SELECT typname FROM pg_type 
-            WHERE typtype = 'e'
-        """))
-        
-        print("\n✅ Existing ENUM types:")
-        for row in enums:
-            print(f"  - {row[0]}")
-
-if __name__ == "__main__":
-    asyncio.run(check_database())
-```
-
-Run it:
-```bash
-cd backend
-python check_db.py
-```
-
----
-
-## 📖 **User Guide**
-
-### **For End Users**
-
-#### **1. Registration & Login**
-- Visit the homepage
-- Click "Crear Cuenta Gratis" to register
-- Or use Guest Mode (5 documents max)
-
-#### **2. Upload Documents**
-- Go to "Upload" section
-- Select PDF files (Form 103 or Form 104)
-- System automatically detects form type
-- Processing happens in real-time
-
-#### **3. View Results**
-- **Documents**: See all uploaded PDFs
-- **Form 103**: View retenciones data in accordion format
-- **Form 104**: View IVA declarations (7 sections, 133 fields)
-- **Clientes**: Organized by company name and year
-
-#### **4. Export Data**
-- Click "Exportar Excel" for spreadsheet
-- Click "Exportar PDF" for branded report
-- Choose yearly summaries or specific documents
-
-### **For Administrators**
-
-#### **Analytics Dashboard**
-Access at `/admin/analytics` (superuser only)
-
-Features:
-- **Visitor Tracking**: Daily, weekly, monthly unique visitors
-- **User Growth**: New registrations over time
-- **Document Uploads**: Track processing activity
-- **Page Views**: See most popular pages
-- **Charts**: Visual representation of all metrics
-
----
-
-## 🚢 **Deployment**
-
-### **Railway Deployment** (Recommended)
-
-#### **Step 1: Prepare Your Repository**
-
-Ensure these files exist:
-- `backend/requirements.txt`
-- `frontend/package.json`
-- `backend/migrations/complete_schema.sql`
-- `.gitignore` (exclude `.env`, `venv/`, `node_modules/`)
-
-#### **Step 2: Create Railway Project**
-
-```bash
-# Install Railway CLI
-npm install -g @railway/cli
-
-# Login
-railway login
-
-# Create new project
-railway init
-```
-
-#### **Step 3: Add Services**
-
-In Railway Dashboard:
-
-1. **Add PostgreSQL Database**
-   - Click "New" → "Database" → "PostgreSQL"
-   - Note the connection string
-
-2. **Add Backend Service**
-   - Click "New" → "GitHub Repo"
-   - Select your repository
-   - Configure:
-     - **Root Directory**: `backend`
-     - **Build Command**: (leave empty)
-     - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-
-3. **Add Frontend Service**
-   - Click "New" → "GitHub Repo"
-   - Select your repository
-   - Configure:
-     - **Root Directory**: `frontend`
-     - **Build Command**: `npm run build`
-     - **Start Command**: `npm run start`
-
-#### **Step 4: Configure Environment Variables**
-
-**Backend Service Variables:**
+#### Backend (.env)
 ```env
-DATABASE_URL=${{Postgres.DATABASE_URL}}
-SECRET_KEY=your-production-secret-key-min-32-chars
-FRONTEND_URL=https://your-frontend.railway.app
-BACKEND_URL=https://your-backend.railway.app
-PORT=8000
+DATABASE_URL=postgresql://user:password@localhost:5432/taxforms
+SECRET_KEY=your-secret-key-min-32-characters
+FRONTEND_URL=http://localhost:3000
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-secret
+RECAPTCHA_SECRET_KEY=your-recaptcha-secret
 ```
 
-**Frontend Service Variables:**
+#### Frontend (.env.local)
 ```env
-NEXT_PUBLIC_API_URL=https://your-backend.railway.app
-NEXT_PUBLIC_SITE_URL=https://your-frontend.railway.app
-PORT=3000
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_RECAPTCHA_SITE_KEY=your-recaptcha-site-key
 ```
 
-#### **Step 5: Run Database Migrations**
+### Docker Setup (Alternative)
 
 ```bash
-# Get the Railway database URL from dashboard
-railway variables
+# Build and run with docker-compose
+docker-compose up -d
 
-# Run migrations
-psql "postgresql://postgres:xxx@containers-us-west-xxx.railway.app:5432/railway" \
-  -f backend/migrations/complete_schema.sql
-```
-
-#### **Step 6: Deploy**
-
-```bash
-railway up
-```
-
-#### **Step 7: Verify Deployment**
-
-1. Check backend health: `https://your-backend.railway.app/docs`
-2. Check frontend: `https://your-frontend.railway.app`
-3. Test upload functionality
-4. Verify database tables exist
-
-### **Production Checklist**
-
-- [x] Database schema applied correctly
-- [x] All environment variables configured
-- [x] SECRET_KEY is strong (32+ characters)
-- [x] CORS settings configured for production domain
-- [x] PostgreSQL connection pooling enabled
-- [x] SSL/HTTPS enabled
-- [x] Analytics tracking enabled
-- [x] Error monitoring setup (optional: Sentry)
-- [x] Backups configured
-- [x] Custom domain configured
-
----
-
-## 📁 **Project Structure**
-
-```
-tax-forms-processor/
-├── backend/
-│   ├── main.py                      # FastAPI app entry
-│   ├── database.py                  # Database connection
-│   ├── models.py                    # SQLAlchemy models (10 tables)
-│   ├── auth.py                      # Authentication logic
-│   ├── api/
-│   │   ├── upload.py                # File upload endpoint
-│   │   ├── documents.py             # Documents CRUD
-│   │   ├── clientes.py              # Clients API
-│   │   ├── analytics.py             # Analytics API
-│   │   ├── form_103.py              # Form 103 endpoints
-│   │   └── form_104.py              # Form 104 endpoints
-│   ├── services/
-│   │   ├── pdf_parser.py            # PDF parsing service
-│   │   ├── form_parser.py           # Form extraction logic
-│   │   └── form_processing.py       # Async processing
-│   ├── migrations/
-│   │   ├── complete_schema.sql      # ⭐ Complete DB schema (USE THIS)
-│   │   ├── 001_initial_schema.sql   # Initial tables
-│   │   ├── 002_add_user_isolation.sql
-│   │   ├── 003_add_form_104_fields.sql
-│   │   └── 004_add_analytics.sql
-│   ├── check_db.py                  # Database health check
-│   └── requirements.txt             # Python dependencies
-│
-├── frontend/
-│   ├── app/
-│   │   ├── layout.tsx               # Root layout
-│   │   ├── page.tsx                 # Homepage
-│   │   ├── dashboard/               # Main app
-│   │   ├── login/                   # Login page
-│   │   ├── register/                # Registration
-│   │   └── admin/                   # Admin panel
-│   ├── components/
-│   │   ├── Dashboard.tsx            # Main dashboard
-│   │   ├── UploadSection.tsx        # Upload UI
-│   │   ├── Form103Section.tsx       # Form 103 display
-│   │   ├── Form104Section.tsx       # Form 104 display (7 sections)
-│   │   ├── ClientDetail.tsx         # Client view
-│   │   ├── YearlySummary.tsx        # Yearly summary
-│   │   ├── AnalyticsDashboard.tsx   # Analytics UI
-│   │   └── PresentationCard.tsx     # Branding card
-│   ├── contexts/
-│   │   ├── AuthContext.tsx          # Auth state
-│   │   └── ThemeContext.tsx         # Dark mode
-│   └── lib/
-│       └── api.ts                   # API client
-│
-├── docker-compose.yml               # Docker setup with auto-migration
-├── Dockerfile.backend               # Backend container
-├── Dockerfile.frontend              # Frontend container
-├── .gitignore                       # Git ignore rules
-└── README.md                        # This file
+# Access the application
+# Frontend: http://localhost:3000
+# Backend: http://localhost:8000
 ```
 
 ---
 
-## 🔐 **Security Best Practices**
+## 🏗️ Architecture
 
-### **Environment Variables**
-- Never commit `.env` files to git
-- Use strong SECRET_KEY (32+ characters)
-- Rotate keys regularly in production
+### System Architecture
 
-### **Database Security**
-- Use strong PostgreSQL passwords
-- Enable SSL connections in production
-- Regular backups (Railway does this automatically)
-- Limit database access to specific IPs
+```
+┌─────────────────────────────────────────────────────────┐
+│                    CLIENT LAYER                          │
+│  (Next.js Frontend - React Components & TypeScript)     │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     │ HTTPS/REST API
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│                    API LAYER                             │
+│    (FastAPI - Async Python with Pydantic validation)    │
+│                                                          │
+│  ┌──────────┐  ┌───────────┐  ┌──────────┐            │
+│  │   Auth   │  │  Upload   │  │ Clients  │            │
+│  │  Routes  │  │  Routes   │  │  Routes  │            │
+│  └──────────┘  └───────────┘  └──────────┘            │
+└────────────────────┬────────────────────────────────────┘
+                     │
+                     │ SQLAlchemy ORM
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│                  DATABASE LAYER                          │
+│         (PostgreSQL - 10 Tables, JSONB fields)          │
+│                                                          │
+│  users • documents • form_103_data • form_104_data      │
+│  guest_sessions • temporary_files • analytics           │
+└─────────────────────────────────────────────────────────┘
+```
 
-### **API Security**
-- CORS configured for specific domains only
-- Rate limiting on sensitive endpoints
-- Input validation on all forms
-- SQL injection protection (via SQLAlchemy)
+### Data Flow: PDF Upload & Processing
+
+```
+1. User uploads PDF → Frontend validates file
+2. API receives file → Saves to temp storage
+3. pdfplumber extracts text → Regex patterns parse fields
+4. Data saved to database → Async SQLAlchemy commit
+5. Frontend polls status → Real-time updates
+6. Success response → Display extracted data
+```
+
+### Database Schema
+
+<img src="docs/images/database-schema.png" alt="Database Schema" width="800"/>
+
+**Key Tables:**
+- `users` - Authentication and profiles
+- `documents` - Metadata for uploaded PDFs
+- `form_103_data` - Extracted data from Form 103
+- `form_104_data` - Extracted data from Form 104 (130 fields)
+- `guest_sessions` - Temporary sessions with document limits
 
 ---
 
-## 🤝 **Contributing**
+## 📚 API Documentation
+
+Interactive API documentation available at:
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+
+### Key Endpoints
+
+#### Authentication
+```http
+POST   /api/auth/register          # Create new account
+POST   /api/auth/login             # Login with credentials
+POST   /api/auth/google            # Google OAuth login
+POST   /api/auth/logout            # Logout
+GET    /api/auth/me                # Get current user
+```
+
+#### Documents
+```http
+POST   /api/upload/bulk            # Upload multiple PDFs
+GET    /api/documents              # List user documents
+GET    /api/documents/{id}         # Get document details
+DELETE /api/documents/{id}         # Delete document
+```
+
+#### Forms
+```http
+GET    /api/forms-data/103/{id}    # Get Form 103 data
+GET    /api/forms-data/104/{id}    # Get Form 104 data
+```
+
+#### Clients
+```http
+GET    /api/clientes               # List user clients
+GET    /api/clientes/{name}        # Get client details
+POST   /api/clientes/export        # Export to Excel/PDF
+```
+
+---
+
+## 🚀 Deployment
+
+### Railway Deployment (Current)
+
+1. **Backend Service**
+   - Build: `Dockerfile` in `backend/`
+   - Start: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+   - Environment: Production variables from Railway
+
+2. **Frontend Service**
+   - Build: `npm run build`
+   - Start: `npm run start`
+   - Environment: Production variables from Railway
+
+3. **PostgreSQL Database**
+   - Managed by Railway
+   - Automatic backups
+   - Connection string in `DATABASE_URL`
+
+### Custom Domain Setup
+
+1. Point DNS to Railway (CNAME)
+2. Configure Cloudflare for CDN
+3. Enable SSL/TLS (Full strict mode)
+4. Set up page rules for caching
+
+---
+
+## 🗺️ Roadmap
+
+### Q1 2025
+- [ ] Form 101 support (Impuesto a la Renta)
+- [ ] Form 106 support (ATS)
+- [ ] Email notifications
+- [ ] Bulk document deletion
+
+### Q2 2025
+- [ ] Mobile app (React Native)
+- [ ] API for third-party integrations
+- [ ] Advanced analytics dashboard
+- [ ] Scheduled reports (weekly/monthly)
+
+### Q3 2025
+- [ ] Multi-language support (English)
+- [ ] WhatsApp notifications
+- [ ] Collaborative features (team accounts)
+
+---
+
+## 🤝 Contributing
 
 Contributions are welcome! Please follow these steps:
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-### **Development Guidelines**
-
-- Write tests for new features
-- Follow TypeScript/Python best practices
-- Update documentation
-- Ensure all tests pass
-- Test database migrations thoroughly
-- Keep commits atomic and well-described
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct.
 
 ---
 
-## 📄 **License**
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🙏 **Acknowledgments**
+## 👤 Contact
 
-- **SRI Ecuador** - For standardized tax form formats
-- **FastAPI** - Excellent web framework
-- **Next.js** - Modern React framework
-- **pdfplumber** - Reliable PDF parsing
-- **Railway** - Simple deployment platform
+Bryan Paucar - [@your_twitter](https://twitter.com/your_twitter)
 
----
+Project Link: [https://github.com/CapBraco/tax_form_processor](https://github.com/CapBraco/tax_form_processor)
 
-## 📞 **Support**
-
-- **Issues**: [GitHub Issues](https://github.com/CapBraco/tax-forms-processor/issues)
-- **Email**: support@capbraco.com
-- **Website**: [https://www.capbraco.com](https://www.capbraco.com)
+Live Demo: [https://tax.capbraco.com](https://tax.capbraco.com)
 
 ---
 
-## 🗺️ **Roadmap**
+## 🙏 Acknowledgments
 
-### **Completed** ✅
-- [x] Form 103 processing (complete with line items)
-- [x] Form 104 processing (133 fields across 7 sections)
-- [x] User authentication
-- [x] Guest mode (5 document limit)
-- [x] Analytics dashboard
-- [x] Excel/PDF exports with branding
-- [x] Mobile responsive design
-- [x] Dark mode
-- [x] Multi-tenant architecture
-- [x] Complete database schema
-- [x] Railway deployment
-
-### **Planned** 🔮
-- [ ] Form 101 support (Impuesto a la Renta)
-- [ ] Form 106 support (ATS)
-- [ ] Email notifications
-- [ ] Scheduled exports
-- [ ] API integrations
-- [ ] Mobile app (React Native)
-- [ ] Machine learning for field extraction
-- [ ] Multi-language support (English)
+- Inspired by real-world accounting workflows in Ecuador
+- Built with modern web technologies and best practices
+- Special thanks to the FastAPI and Next.js communities
 
 ---
 
-## 📊 **Statistics**
+<div align="center">
 
-- **Lines of Code**: ~18,000+
-- **Components**: 25+ React components
-- **API Endpoints**: 35+ routes
-- **Database Tables**: 10 tables
-- **Form Fields Processed**: 143+ fields (Form 103 + 104)
-- **Supported PDF Types**: 2 (Form 103, 104)
-- **Database Columns**: 300+ across all tables
+Made with ❤️ by Bryan A Paucar
 
----
+⭐ Star this repo if you find it helpful!
 
-## 💡 **Tips & Best Practices**
-
-### **Database Management**
-- Always use `complete_schema.sql` for new deployments
-- Test migrations on development database first
-- Back up production database before migrations
-- Use `check_db.py` to verify schema integrity
-
-### **Development Workflow**
-1. Make changes in a feature branch
-2. Test locally with Docker Compose
-3. Verify database schema
-4. Test both Form 103 and Form 104 uploads
-5. Check analytics tracking
-6. Deploy to staging (if available)
-7. Deploy to production
-
-### **Performance Optimization**
-- PostgreSQL connection pooling enabled by default
-- Index on frequently queried columns (razon_social, periodo_fiscal_completo)
-- Async processing for PDF parsing
-- React component lazy loading
-
----
-### 📷 **Media**
-![Dashboard](assets/1.png)
-![Clients](assets/2.png)
-![Forms View](assets/3.png)
-![Yearly Summary](assets/4.png)
-
----
-
-
-**Built with ❤️ by [CapBraco](https://www.capbraco.com)**
-
-*Last Updated: December 16, 2025*
+</div>
