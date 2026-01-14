@@ -266,7 +266,7 @@ docker-compose up -d
 
 ### Database Schema
 
-<img src="docs/images/database-schema.png" alt="Database Schema" width="800"/>
+<img src="docs/images/database_schema.png" alt="Database Schema" width="800"/>
 
 **Key Tables:**
 - `users` - Authentication and profiles
