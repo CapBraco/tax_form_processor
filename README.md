@@ -388,7 +388,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👤 Contact
 
-Bryan Paucar - [@your_twitter](https://twitter.com/your_twitter)
+Bryan A Paucar - [@devbraco](https://twitter.com/devbraco)
 
 Project Link: [https://github.com/CapBraco/tax_form_processor](https://github.com/CapBraco/tax_form_processor)
 
@@ -399,6 +399,7 @@ Live Demo: [https://tax.capbraco.com](https://tax.capbraco.com)
 ## 🙏 Acknowledgments
 
 - Inspired by real-world accounting workflows in Ecuador
+- Thanks to my father for inspiring me to build this app
 - Built with modern web technologies and best practices
 - Special thanks to the FastAPI and Next.js communities
 
