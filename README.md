@@ -116,16 +116,16 @@ Automated PDF processing with:
 ### Landing Page
 <img src="docs/images/1.png" alt="Landing Page" width="800"/>
 
-### Document Upload
+### CLients Interface
 <img src="docs/images/2.png" alt="Clients Interface" width="800"/>
 
 ### Form 103 Display
 <img src="docs/images/3.png" alt="Form 103" width="800"/>
 
-### Client Management
+### Yearly Summary
 <img src="docs/images/4.png" alt="Yearly Summary" width="800"/>
 
-### Dark Mode
+### Light Mode
 <img src="docs/images/5.png" alt="Light Mode" width="800"/>
 
 ---
